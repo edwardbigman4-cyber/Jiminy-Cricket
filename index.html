@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f1115" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Liftoff" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<title>Liftoff</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#181b21; --line:#262a33;
+    --text:#e6e8eb; --muted:#8b93a1; --accent:#4ade80; --danger:#f87171;
+    --warn-bg:#2a1e0e; --warn-line:#5c4420; --warn-fg:#f5c98a;
+    --ok-bg:#0f2318; --ok-line:#1f4a2e; --ok-fg:#7ee2a8;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{
+    margin:0 auto; max-width:720px;
+    padding: calc(16px + env(safe-area-inset-top)) 16px
+             calc(24px + env(safe-area-inset-bottom));
+    background:var(--bg); color:var(--text);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  h1{font-size:20px; margin:0 0 4px}
+  h2{font-size:13px; text-transform:uppercase; letter-spacing:.07em;
+     color:var(--muted); margin:26px 0 8px}
+  .card{background:var(--card); border:1px solid var(--line);
+        border-radius:12px; padding:14px}
+  input,button,select{font:inherit}
+  input[type=text],input[type=number],input[type=date],select{
+    width:100%; padding:10px; border-radius:8px; border:1px solid var(--line);
+    background:#0f1216; color:var(--text); outline:none;
+    -webkit-appearance:none; appearance:none;
+  }
+  input:focus,select:focus{border-color:var(--accent)}
+  .row{display:flex; gap:8px; align-items:center}
+  .row > *{flex:1}
+  .row > .shrink,.shrink{flex:0 0 auto}
+  button{padding:10px 14px; border-radius:8px; border:1px solid var(--line);
+         background:#232833; color:var(--text); cursor:pointer}
+  button:hover{background:#2b3240}
+  button.primary{background:var(--accent); color:#06240f;
+                 border-color:var(--accent); font-weight:600}
+  button.primary:hover{filter:brightness(1.08)}
+  button.ghost{background:transparent}
+  button.x{border:none; background:transparent; color:var(--muted);
+           padding:4px 8px; line-height:1}
+  button.x:hover{color:var(--danger)}
+  .setrow{display:flex; align-items:center; gap:8px; padding:6px 0;
+          border-top:1px dashed var(--line); font-size:14px}
+  .setrow .lbl{color:var(--muted); width:56px; flex:0 0 auto}
+  .setrow .val{flex:1}
+  .exercise{border-top:1px solid var(--line); padding-top:8px; margin-top:8px}
+  .exercise:first-child{border-top:none; margin-top:0; padding-top:0}
+  .exname{font-weight:600}
+  .grow{flex:1}
+  .empty{color:var(--muted); font-size:14px; margin:6px 0}
+  .muted{color:var(--muted); font-size:13px}
+  details.workout{border-top:1px solid var(--line); padding:10px 0}
+  details.workout:first-of-type{border-top:none}
+  summary{cursor:pointer; list-style:none; display:flex; gap:8px;
+          align-items:flex-start; justify-content:space-between}
+  summary::-webkit-details-marker{display:none}
+  .banner{border-radius:10px; padding:10px 12px; font-size:13px;
+          margin-bottom:14px; border:1px solid var(--line)}
+  .banner.warn{background:var(--warn-bg); border-color:var(--warn-line); color:var(--warn-fg)}
+  .banner.ok{background:var(--ok-bg); border-color:var(--ok-line); color:var(--ok-fg)}
+  .banner .link{background:none; border:none; padding:0; color:inherit;
+                text-decoration:underline; cursor:pointer; font:inherit}
+  #stats{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+  .stat{background:var(--card); border:1px solid var(--line);
+        border-radius:10px; padding:10px 6px; text-align:center}
+  .stat-num{font-size:18px; font-weight:700}
+  .stat-lbl{font-size:10px; color:var(--muted); text-transform:uppercase;
+            letter-spacing:.05em}
+  .toggle{display:flex; align-items:center; justify-content:space-between;
+          gap:12px; padding:10px 0; border-top:1px solid var(--line)}
+  .toggle:first-child{border-top:none}
+  .toggle .lbl{flex:1}
+  .toggle .lbl small{display:block; color:var(--muted); font-size:12px}
+  .switch{position:relative; width:44px; height:26px; flex:0 0 auto}
+  .switch input{position:absolute; opacity:0; width:100%; height:100%;
+                margin:0; cursor:pointer}
+  .switch .track{position:absolute; inset:0; background:#2b3240;
+                 border-radius:13px; transition:.2s; pointer-events:none}
+  .switch .track::after{content:''; position:absolute; top:3px; left:3px;
+                        width:20px; height:20px; border-radius:50%;
+                        background:#e6e8eb; transition:.2s}
+  .switch input:checked + .track{background:var(--accent)}
+  .switch input:checked + .track::after{left:21px; background:#06240f}
+  .snaprow{display:flex; align-items:center; gap:10px; padding:8px 0;
+           border-top:1px dashed var(--line); font-size:14px}
+  .snaprow:first-child{border-top:none}
+  .snaprow .meta{flex:1}
+  .snaprow .when{font-weight:500}
+  .snaprow .why{color:var(--muted); font-size:12px}
+</style>
+</head>
+<body>
+
+<h1>Liftoff 🚀</h1>
+
+<div id="installHint" class="banner ok" hidden>
+  Tap <strong>Share</strong> → <strong>Add to Home Screen</strong> for the full-screen app.
+  <button class="link" data-action="dismiss-install">Got it</button>
+</div>
+
+<div id="restoreBanner" class="banner warn" hidden></div>
+<div id="backupStatus" class="banner" hidden></div>
+
+<div id="stats" style="margin-bottom:8px"></div>
+
+<h2>Current workout</h2>
+<div class="card">
+  <input type="date" id="date" />
+  <input type="text" id="exName" placeholder="Exercise (e.g. Bench Press)"
+         style="margin-top:12px" />
+  <div id="pendingSets"></div>
+  <button class="ghost" data-action="add-set" style="margin-top:8px">＋ Add set</button>
+  <button class="primary" data-action="add-exercise"
+          style="margin-top:12px; width:100%">Add exercise</button>
+  <div id="draftList" style="margin-top:14px"></div>
+  <div class="row" style="margin-top:16px">
+    <button class="primary" data-action="finish">Finish workout</button>
+    <button class="ghost shrink" data-action="discard">Discard</button>
+  </div>
+</div>
+
+<h2>Exercise history</h2>
+<div class="card">
+  <select id="exFilter"><option value="">— pick an exercise —</option></select>
+  <div id="exHistory" style="margin-top:10px"></div>
+</div>
+
+<h2>History</h2>
+<div class="card" id="history"></div>
+
+<h2>Backup</h2>
+<div class="card">
+  <div class="toggle">
+    <div class="lbl">Auto-backup file after each workout
+      <small>Saves a JSON to Files → Downloads (syncs to iCloud if enabled).</small>
+    </div>
+    <label class="switch"><input type="checkbox" id="optAutoDownload">
+      <span class="track"></span></label>
+  </div>
+  <div class="toggle">
+    <div class="lbl">Auto-snapshot history
+      <small>Rolling internal snapshots you can restore from — up to 8.</small>
+    </div>
+    <label class="switch"><input type="checkbox" id="optAutoSnapshot" checked>
+      <span class="track"></span></label>
+  </div>
+  <div class="row" style="margin-top:14px">
+    <button data-action="export">Backup now</button>
+    <button data-action="import">Import</button>
+    <button data-action="csv">CSV</button>
+  </div>
+  <p class="muted" id="storageInfo" style="margin:10px 0 0"></p>
+  <input type="file" id="importFile" accept="application/json,.json" hidden />
+</div>
+
+<h2>Recovery snapshots</h2>
+<div class="card" id="recovery"></div>
+
+<script>
+const KEY_W = 'liftoff.workouts.v1';
+const KEY_D = 'liftoff.draft.v1';
+const KEY_M = 'liftoff.meta.v1';
+const KEY_HINT = 'liftoff.installHintDismissed';
+const SNAP_PREFIX = 'liftoff.snapshot.';
+const MAX_SNAPSHOTS = 8;
+const SNAPSHOT_MIN_GAP_MS = 60 * 1000;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+function todayISO(){
+  const d = new Date();
+  return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+function blankSet(){ return { weight: '', reps: '' }; }
+function relTime(ts){
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  const d = Math.floor(h / 24);
+  if (d < 30) return d + 'd ago';
+  return new Date(ts).toLocaleDateString();
+}
+
+function loadJSON(k, fallback){
+  try { return JSON.parse(localStorage.getItem(k)) ?? fallback; }
+  catch { return fallback; }
+}
+
+/* ---------- state ---------- */
+let workouts = loadJSON(KEY_W, []);
+let draft    = loadJSON(KEY_D, { date: todayISO(), exercises: [] });
+let meta     = loadJSON(KEY_M, {
+  lastBackupAt: null,
+  lastSnapshotAt: null,
+  autoDownload: true,
+  autoSnapshot: true,
+  dirty: false
+});
+
+let pendingSets = [blankSet()];
+let exName = '';
+
+function persist(){
+  localStorage.setItem(KEY_W, JSON.stringify(workouts));
+  localStorage.setItem(KEY_D, JSON.stringify(draft));
+  localStorage.setItem(KEY_M, JSON.stringify(meta));
+}
+
+async function requestPersistence(){
+  try {
+    if (navigator.storage?.persist && !(await navigator.storage.persisted?.())) {
+      await navigator.storage.persist();
+    }
+  } catch {}
+}
+
+/* ---------- snapshot engine ---------- */
+function listSnapshots(){
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (!k?.startsWith(SNAP_PREFIX)) continue;
+    try {
+      const d = JSON.parse(localStorage.getItem(k));
+      out.push({ key: k, at: d.at, reason: d.reason,
+                 count: (d.workouts || []).length,
+                 workouts: d.workouts });
+    } catch {}
+  }
+  return out.sort((a, b) => b.at - a.at);
+}
+
+function pruneSnapshots(){
+  listSnapshots().slice(MAX_SNAPSHOTS)
+    .forEach(s => localStorage.removeItem(s.key));
+}
+
+function autoSnapshot(reason){
+  if (!meta.autoSnapshot) return;
+  const sig = JSON.stringify(workouts);
+  const latest = listSnapshots()[0];
+  if (latest && Date.now() - latest.at < SNAPSHOT_MIN_GAP_MS
+      && JSON.stringify(latest.workouts) === sig){
+    return;
+  }
+  const key = SNAP_PREFIX + Date.now() + '.' + uid();
+  localStorage.setItem(key, JSON.stringify({
+    at: Date.now(), reason, workouts
+  }));
+  meta.lastSnapshotAt = Date.now();
+  localStorage.setItem(KEY_M, JSON.stringify(meta));
+  pruneSnapshots();
+  renderRecovery();
+}
+
+function restoreSnapshot(key){
+  const snap = listSnapshots().find(s => s.key === key);
+  if (!snap) return;
+  if (!confirm(
+    `Restore ${snap.count} workouts from ${new Date(snap.at).toLocaleString()}?\n\n` +
+    `Current state will be snapshotted first so you can undo.`
+  )) return;
+  const preKey = SNAP_PREFIX + Date.now() + '.' + uid();
+  localStorage.setItem(preKey, JSON.stringify({
+    at: Date.now(), reason: 'before restore', workouts
+  }));
+  workouts = snap.workouts;
+  meta.dirty = true;
+  persist();
+  renderAll();
+}
+
+/* ---------- helpers ---------- */
+const volumeOf = w => Math.round(
+  w.exercises.reduce((t, e) =>
+    t + e.sets.reduce((s, x) => s + x.weight * x.reps, 0), 0));
+
+const bestSet = sets => sets.reduce((b, s) =>
+  (s.weight > b.weight || (s.weight === b.weight && s.reps > b.reps)) ? s : b,
+  sets[0]);
+
+/* ---------- render ---------- */
+function renderPendingSets(){
+  const wrap = $('#pendingSets');
+  wrap.innerHTML = '';
+  pendingSets.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.style.marginTop = '8px';
+    row.innerHTML =
+      '<input type="number" inputmode="decimal" placeholder="kg" step="0.5" min="0">' +
+      '<input type="number" inputmode="numeric" placeholder="reps" step="1" min="1">' +
+      `<button class="x shrink" data-action="remove-set" data-i="${i}">✕</button>`;
+    const [wIn, rIn] = row.querySelectorAll('input');
+    wIn.value = s.weight; rIn.value = s.reps;
+    wIn.oninput = e => s.weight = e.target.value;
+    rIn.oninput = e => s.reps = e.target.value;
+    wrap.appendChild(row);
+  });
+}
+
+function renderDraft(){
+  const list = $('#draftList');
+  if (!draft.exercises.length){
+    list.innerHTML = '<p class="empty">No exercises added yet.</p>';
+    return;
+  }
+  list.innerHTML = draft.exercises.map((ex, ei) => {
+    const sets = ex.sets.map((s, si) => `
+      <div class="setrow">
+        <span class="lbl">Set ${si + 1}</span>
+        <span class="val">${s.weight} kg × ${s.reps}</span>
+        <button class="x" data-action="rm-set" data-ei="${ei}" data-si="${si}">✕</button>
+      </div>`).join('');
+    return `<div class="exercise">
+      <div class="row">
+        <span class="exname grow">${esc(ex.name)}</span>
+        <button class="x shrink" data-action="rm-ex" data-ei="${ei}">✕</button>
+      </div>
+      ${sets}
+    </div>`;
+  }).join('');
+}
+
+function renderHistory(){
+  const h = $('#history');
+  if (!workouts.length){
+    h.innerHTML = '<p class="empty">No workouts saved yet.</p>';
+    return;
+  }
+  h.innerHTML = [...workouts]
+    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
+    .map(w => {
+      const nSets = w.exercises.reduce((n, e) => n + e.sets.length, 0);
+      const body = w.exercises.map(e => `
+        <div class="exercise">
+          <div class="exname">${esc(e.name)}</div>
+          ${e.sets.map((s, i) => `
+            <div class="setrow">
+              <span class="lbl">Set ${i + 1}</span>
+              <span class="val">${s.weight} kg × ${s.reps}</span>
+            </div>`).join('')}
+        </div>`).join('');
+      return `<details class="workout">
+        <summary>
+          <span class="grow">
+            <strong>${w.date}</strong><br>
+            <span class="muted">${w.exercises.length} exercises ·
+              ${nSets} sets · ${volumeOf(w)} kg volume</span>
+          </span>
+          <button class="x shrink" data-action="del-workout" data-id="${w.id}">✕</button>
+        </summary>
+        ${body}
+      </details>`;
+    }).join('');
+}
+
+function renderStats(){
+  const el = $('#stats');
+  if (!workouts.length){ el.innerHTML = ''; return; }
+  const totalVol  = workouts.reduce((t, w) => t + volumeOf(w), 0);
+  const totalSets = workouts.reduce((t, w) =>
+    t + w.exercises.reduce((n, e) => n + e.sets.length, 0), 0);
+  const now  = new Date();
+  const dow  = (now.getDay() + 6) % 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dow);
+  monday.setHours(0, 0, 0, 0);
+  const weekCount = workouts.filter(w => new Date(w.date) >= monday).length;
+  el.innerHTML = `
+    <div class="stat"><div class="stat-num">${workouts.length}</div><div class="stat-lbl">Workouts</div></div>
+    <div class="stat"><div class="stat-num">${weekCount}</div><div class="stat-lbl">This week</div></div>
+    <div class="stat"><div class="stat-num">${Math.round(totalVol).toLocaleString()}</div><div class="stat-lbl">kg volume</div></div>
+    <div class="stat"><div class="stat-num">${totalSets}</div><div class="stat-lbl">Sets</div></div>`;
+}
+
+function allExerciseNames(){
+  const s = new Set();
+  workouts.forEach(w => w.exercises.forEach(e => s.add(e.name)));
+  return [...s].sort((a, b) => a.localeCompare(b));
+}
+
+function renderExercisePicker(){
+  const sel = $('#exFilter');
+  const names = allExerciseNames();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— pick an exercise —</option>' +
+    names.map(n => `<option>${esc(n)}</option>`).join('');
+  if (names.includes(cur)) sel.value = cur;
+}
+
+function renderExerciseHistory(){
+  const name = $('#exFilter').value;
+  const el = $('#exHistory');
+  if (!name){ el.innerHTML = ''; return; }
+  const sessions = [];
+  workouts.forEach(w => {
+    w.exercises.forEach(e => {
+      if (e.name.toLowerCase() === name.toLowerCase()){
+        sessions.push({ date: w.date, sets: e.sets });
+      }
+    });
+  });
+  sessions.sort((a, b) => b.date.localeCompare(a.date));
+  if (!sessions.length){ el.innerHTML = '<p class="empty">No sessions found.</p>'; return; }
+  el.innerHTML = sessions.map(s => {
+    const vol = Math.round(s.sets.reduce((t, x) => t + x.weight * x.reps, 0));
+    const b = bestSet(s.sets);
+    return `<div class="exercise">
+      <div class="row">
+        <span class="exname grow">${s.date}</span>
+        <span class="muted">${vol} kg vol</span>
+      </div>
+      <div class="muted">Best: ${b.weight} kg × ${b.reps}</div>
+      ${s.sets.map((x, i) => `
+        <div class="setrow">
+          <span class="lbl">Set ${i + 1}</span>
+          <span class="val">${x.weight} kg × ${x.reps}</span>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderBackup(){
+  const el = $('#backupStatus');
+  if (!workouts.length){ el.hidden = true; return; }
+  el.hidden = false;
+  const ts = meta.lastBackupAt;
+  if (!ts){
+    el.className = 'banner warn';
+    el.innerHTML = `⚠️ No backup yet. ` +
+      `<button class="link" data-action="export">Back up now</button>`;
+    return;
+  }
+  const days = Math.floor((Date.now() - ts) / 86400000);
+  if (days >= 7){
+    el.className = 'banner warn';
+    el.innerHTML = `⚠️ Last backup ${days} days ago. ` +
+      `<button class="link" data-action="export">Back up now</button>`;
+  } else {
+    el.className = 'banner ok';
+    const label = meta.autoDownload
+      ? `✓ Auto-backed up ${days === 0 ? 'today' : days + 'd ago'}`
+      : `✓ Backed up ${days === 0 ? 'today' : days + 'd ago'}`;
+    el.textContent = label;
+  }
+}
+
+function renderRecovery(){
+  const el = $('#recovery');
+  const snaps = listSnapshots();
+  if (!snaps.length){
+    el.innerHTML = '<p class="empty">No snapshots yet.</p>';
+    return;
+  }
+  el.innerHTML = snaps.map(s => `
+    <div class="snaprow">
+      <div class="meta">
+        <div class="when">${relTime(s.at)}</div>
+        <div class="why">${s.count} workouts · ${esc(s.reason)}</div>
+      </div>
+      <button data-action="restore" data-key="${s.key}">Restore</button>
+    </div>`).join('');
+}
+
+function renderRestoreBanner(){
+  const el = $('#restoreBanner');
+  const snaps = listSnapshots();
+  const isEmpty = !workouts.length && !draft.exercises.length;
+  const best = snaps.find(s => s.count > 0);
+  if (isEmpty && best){
+    el.hidden = false;
+    el.innerHTML = `No current data — found a snapshot from ` +
+      `<strong>${relTime(best.at)}</strong> with ${best.count} workouts. ` +
+      `<button class="link" data-action="restore" data-key="${best.key}">Restore it</button>`;
+  } else {
+    el.hidden = true;
+  }
+}
+
+function renderInstallHint(){
+  const el = $('#installHint');
+  const dismissed = localStorage.getItem(KEY_HINT) === '1';
+  const standalone = window.matchMedia('(display-mode: standalone)').matches
+                    || navigator.standalone === true;
+  el.hidden = dismissed || standalone;
+}
+
+async function renderStorage(){
+  try {
+    const { usage, quota } = await navigator.storage.estimate();
+    const fmt = b => b >= 1e9 ? (b/1e9).toFixed(1)+' GB'
+                 : b >= 1e6 ? (b/1e6).toFixed(1)+' MB'
+                 : (b/1e3).toFixed(0)+' KB';
+    const persisted = await navigator.storage.persisted?.();
+    $('#storageInfo').textContent =
+      `${fmt(usage)} used${quota ? ' · ' + fmt(quota) + ' quota' : ''}` +
+      (persisted ? ' · persistent' : '');
+  } catch {}
+}
+
+function renderAll(){
+  renderPendingSets();
+  renderDraft();
+  renderHistory();
+  renderStats();
+  renderExercisePicker();
+  renderExerciseHistory();
+  renderBackup();
+  renderRecovery();
+  renderRestoreBanner();
+  renderInstallHint();
+  renderStorage();
+}
+
+/* ---------- export / import ---------- */
+function download(filename, text, type){
+  const blob = new Blob([text], { type: type || 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function backupFilename(){
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `liftoff-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}` +
+         `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.json`;
+}
+
+function exportJSON(silent){
+  const data = JSON.stringify({
+    app: 'liftoff',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    workouts
+  }, null, 2);
+  download(backupFilename(), data);
+  meta.lastBackupAt = Date.now();
+  persist();
+  renderBackup();
+}
+
+function autoBackupAfterWorkout(){
+  if (!meta.autoDownload) return;
+  exportJSON(true);
+}
+
+function csvCell(v){
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function exportCSV(){
+  const rows = [['date', 'exercise', 'set', 'weight_kg', 'reps']];
+  [...workouts].sort((a, b) => a.date.localeCompare(b.date)).forEach(w => {
+    w.exercises.forEach(e => {
+      e.sets.forEach((s, i) => {
+        rows.push([w.date, e.name, i + 1, s.weight, s.reps]);
+      });
+    });
+  });
+  download(backupFilename().replace(/\.json$/, '.csv'),
+           rows.map(r => r.map(csvCell).join(',')).join('\n'),
+           'text/csv');
+}
+
+function validateWorkout(w){
+  if (!w || typeof w !== 'object') return null;
+  if (typeof w.date !== 'string') return null;
+  if (!Array.isArray(w.exercises)) return null;
+  const exercises = w.exercises.map(e => {
+    if (!e || typeof e.name !== 'string' || !Array.isArray(e.sets)) return null;
+    const sets = e.sets.map(s => ({
+      weight: Number(s?.weight) || 0,
+      reps:   Number(s?.reps)   || 0
+    })).filter(s => s.reps > 0);
+    if (!sets.length) return null;
+    return { id: e.id || uid(), name: e.name, sets };
+  }).filter(Boolean);
+  if (!exercises.length) return null;
+  return {
+    id: w.id || uid(),
+    date: w.date,
+    createdAt: Number(w.createdAt) || Date.now(),
+    exercises
+  };
+}
+
+function importJSON(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const raw = JSON.parse(reader.result);
+      const incoming = Array.isArray(raw) ? raw : raw.workouts;
+      if (!Array.isArray(incoming)) throw new Error('No workouts array found.');
+      const clean = incoming.map(validateWorkout).filter(Boolean);
+      if (!clean.length) throw new Error('No valid workouts in that file.');
+      autoSnapshot('before import');
+      const existing = new Set(workouts.map(w => w.id));
+      let added = 0;
+      for (const w of clean){
+        if (!existing.has(w.id)){ workouts.push(w); existing.add(w.id); added++; }
+      }
+      meta.lastBackupAt = Date.now();
+      meta.dirty = true;
+      persist();
+      renderAll();
+      alert(`Imported ${added} new workout${added === 1 ? '' : 's'} ` +
+            `(${clean.length - added} already present).`);
+    } catch (err){
+      alert('Import failed: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- actions ---------- */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const a = btn.dataset.action;
+
+  if (a === 'add-set'){
+    pendingSets.push(blankSet());
+    renderPendingSets();
+  }
+
+  else if (a === 'remove-set'){
+    pendingSets.splice(+btn.dataset.i, 1);
+    if (!pendingSets.length) pendingSets.push(blankSet());
+    renderPendingSets();
+  }
+
+  else if (a === 'add-exercise'){
+    const name = exName.trim();
+    if (!name){ alert('Give the exercise a name first.'); return; }
+    const sets = pendingSets.map(s => ({
+      weight: Math.max(0, parseFloat(s.weight) || 0),
+      reps:   parseInt(s.reps, 10) || 0
+    })).filter(s => s.reps > 0);
+    if (!sets.length){ alert('Add at least one set with reps > 0.'); return; }
+    draft.exercises.push({ id: uid(), name, sets });
+    exName = '';
+    $('#exName').value = '';
+    pendingSets = [blankSet()];
+    persist();
+    renderAll();
+    $('#exName').focus();
+  }
+
+  else if (a === 'rm-set'){
+    draft.exercises[+btn.dataset.ei].sets.splice(+btn.dataset.si, 1);
+    persist();
+    renderDraft();
+  }
+
+  else if (a === 'rm-ex'){
+    draft.exercises.splice(+btn.dataset.ei, 1);
+    persist();
+    renderDraft();
+  }
+
+  else if (a === 'finish'){
+    if (!draft.exercises.length){
+      alert('Nothing to save — add an exercise first.');
+      return;
+    }
+    workouts.push({
+      id: uid(),
+      date: draft.date,
+      createdAt: Date.now(),
+      exercises: draft.exercises
+    });
+    draft = { date: todayISO(), exercises: [] };
+    $('#date').value = draft.date;
+    meta.dirty = true;
+    persist();
+    autoSnapshot('after finish');
+    autoBackupAfterWorkout();
+    renderAll();
+  }
+
+  else if (a === 'discard'){
+    if (!draft.exercises.length) return;
+    if (!confirm('Discard this workout?')) return;
+    draft = { date: todayISO(), exercises: [] };
+    exName = '';
+    $('#exName').value = '';
+    pendingSets = [blankSet()];
+    persist();
+    renderAll();
+  }
+
+  else if (a === 'del-workout'){
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('Delete this workout permanently?')) return;
+    autoSnapshot('before delete');
+    workouts = workouts.filter(w => w.id !== btn.dataset.id);
+    meta.dirty = true;
+    persist();
+    renderAll();
+  }
+
+  else if (a === 'export')  { exportJSON(false); }
+  else if (a === 'csv')     { exportCSV(); }
+  else if (a === 'import')  { $('#importFile').click(); }
+
+  else if (a === 'restore'){
+    restoreSnapshot(btn.dataset.key);
+  }
+
+  else if (a === 'dismiss-install'){
+    localStorage.setItem(KEY_HINT, '1');
+    renderInstallHint();
+  }
+});
+
+/* ---------- lifecycle ---------- */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden'){
+    if (meta.dirty){
+      autoSnapshot('backgrounded');
+      meta.dirty = false;
+      persist();
+    }
+  }
+});
+
+window.addEventListener('pagehide', () => {
+  if (meta.dirty){
+    autoSnapshot('page hide');
+    meta.dirty = false;
+    persist();
+  }
+});
+
+/* ---------- init ---------- */
+(function init(){
+  $('#date').value = draft.date;
+  $('#date').onchange = e => {
+    draft.date = e.target.value || todayISO();
+    persist();
+  };
+  $('#exName').oninput = e => { exName = e.target.value; };
+  $('#exFilter').onchange = renderExerciseHistory;
+  $('#importFile').onchange = e => {
+    const f = e.target.files?.[0];
+    if (f) importJSON(f);
+    e.target.value = '';
+  };
+
+  const optD = $('#optAutoDownload');
+  const optS = $('#optAutoSnapshot');
+  optD.checked = !!meta.autoDownload;
+  optS.checked = !!meta.autoSnapshot;
+  optD.onchange = () => {
+    meta.autoDownload = optD.checked;
+    persist();
+    renderBackup();
+  };
+  optS.onchange = () => {
+    meta.autoSnapshot = optS.checked;
+    persist();
+    renderRecovery();
+  };
+
+  requestPersistence();
+  if (meta.autoSnapshot && workouts.length
+      && (!meta.lastSnapshotAt
+          || Date.now() - meta.lastSnapshotAt > 6 * 3600 * 1000)){
+    autoSnapshot('on open');
+  }
+  renderAll();
+
+  if ('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
