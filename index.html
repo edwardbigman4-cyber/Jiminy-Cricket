@@ -99,6 +99,19 @@
   .snaprow .meta{flex:1}
   .snaprow .when{font-weight:500}
   .snaprow .why{color:var(--muted); font-size:12px}
+  /* search picker */
+  #pickerResults{margin-top:8px; max-height:280px; overflow-y:auto;
+                 border:1px solid var(--line); border-radius:8px;
+                 background:#0f1216}
+  .pick-item{display:flex; justify-content:space-between; align-items:center;
+             padding:10px 12px; border-bottom:1px solid var(--line);
+             cursor:pointer; font-size:14px}
+  .pick-item:last-child{border-bottom:none}
+  .pick-item:hover{background:#232833}
+  .pick-item .pick-cat{color:var(--muted); font-size:11px;
+                       text-transform:uppercase; letter-spacing:.05em}
+  .pick-item.custom{color:var(--accent)}
+  #selectedExercise{font-weight:600; color:var(--accent); margin-top:8px}
 </style>
 </head>
 <body>
@@ -118,13 +131,20 @@
 <h2>Current workout</h2>
 <div class="card">
   <input type="date" id="date" />
-  <input type="text" id="exName" placeholder="Exercise (e.g. Bench Press)"
-         style="margin-top:12px" />
+
+  <!-- exercise picker -->
+  <input type="text" id="exSearch" placeholder="Search exercise… (e.g. bench, squat, curl)"
+         style="margin-top:12px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+  <div id="pickerResults" hidden></div>
+  <div id="selectedExercise"></div>
+
   <div id="pendingSets"></div>
   <button class="ghost" data-action="add-set" style="margin-top:8px">＋ Add set</button>
   <button class="primary" data-action="add-exercise"
           style="margin-top:12px; width:100%">Add exercise</button>
+
   <div id="draftList" style="margin-top:14px"></div>
+
   <div class="row" style="margin-top:16px">
     <button class="primary" data-action="finish">Finish workout</button>
     <button class="ghost shrink" data-action="discard">Discard</button>
@@ -169,6 +189,188 @@
 <div class="card" id="recovery"></div>
 
 <script>
+/* ============================================================
+   EXERCISE LIBRARY
+   A searchable subset of Liftoff's 600+ exercise library,
+   organized by muscle category.
+   ============================================================ */
+const EXERCISE_LIBRARY = [
+  // CHEST
+  {n:"Barbell Bench Press", c:"Chest"},
+  {n:"Incline Barbell Bench Press", c:"Chest"},
+  {n:"Decline Barbell Bench Press", c:"Chest"},
+  {n:"Dumbbell Bench Press", c:"Chest"},
+  {n:"Incline Dumbbell Bench Press", c:"Chest"},
+  {n:"Decline Dumbbell Bench Press", c:"Chest"},
+  {n:"Dumbbell Fly", c:"Chest"},
+  {n:"Incline Dumbbell Fly", c:"Chest"},
+  {n:"Cable Crossover", c:"Chest"},
+  {n:"Low-to-High Cable Fly", c:"Chest"},
+  {n:"High-to-Low Cable Fly", c:"Chest"},
+  {n:"Pec Deck Machine", c:"Chest"},
+  {n:"Machine Chest Press", c:"Chest"},
+  {n:"Smith Machine Bench Press", c:"Chest"},
+  {n:"Push-Up", c:"Chest"},
+  {n:"Incline Push-Up", c:"Chest"},
+  {n:"Decline Push-Up", c:"Chest"},
+  {n:"Diamond Push-Up", c:"Chest"},
+  {n:"Chest Dip", c:"Chest"},
+  {n:"Weighted Dip", c:"Chest"},
+  {n:"Svend Press", c:"Chest"},
+  {n:"Landmine Chest Press", c:"Chest"},
+  {n:"Dumbbell Pullover", c:"Chest"},
+
+  // BACK
+  {n:"Deadlift", c:"Back"},
+  {n:"Romanian Deadlift", c:"Back"},
+  {n:"Stiff Leg Deadlift", c:"Back"},
+  {n:"Barbell Row", c:"Back"},
+  {n:"Pendlay Row", c:"Back"},
+  {n:"Dumbbell Row", c:"Back"},
+  {n:"T-Bar Row", c:"Back"},
+  {n:"Seated Cable Row", c:"Back"},
+  {n:"Chest Supported Row", c:"Back"},
+  {n:"Lat Pulldown", c:"Back"},
+  {n:"Close Grip Lat Pulldown", c:"Back"},
+  {n:"Pull-Up", c:"Back"},
+  {n:"Chin-Up", c:"Back"},
+  {n:"Weighted Pull-Up", c:"Back"},
+  {n:"Muscle-Up", c:"Back"},
+  {n:"Inverted Row", c:"Back"},
+  {n:"Face Pull", c:"Back"},
+  {n:"Straight Arm Pulldown", c:"Back"},
+  {n:"Barbell Shrug", c:"Back"},
+  {n:"Dumbbell Shrug", c:"Back"},
+  {n:"Rack Pull", c:"Back"},
+  {n:"Good Morning", c:"Back"},
+  {n:"Back Extension", c:"Back"},
+  {n:"Reverse Hyperextension", c:"Back"},
+
+  // SHOULDERS
+  {n:"Overhead Press", c:"Shoulders"},
+  {n:"Barbell Shoulder Press", c:"Shoulders"},
+  {n:"Dumbbell Shoulder Press", c:"Shoulders"},
+  {n:"Arnold Press", c:"Shoulders"},
+  {n:"Seated Dumbbell Press", c:"Shoulders"},
+  {n:"Push Press", c:"Shoulders"},
+  {n:"Landmine Press", c:"Shoulders"},
+  {n:"Lateral Raise", c:"Shoulders"},
+  {n:"Dumbbell Lateral Raise", c:"Shoulders"},
+  {n:"Cable Lateral Raise", c:"Shoulders"},
+  {n:"Machine Lateral Raise", c:"Shoulders"},
+  {n:"Front Raise", c:"Shoulders"},
+  {n:"Plate Front Raise", c:"Shoulders"},
+  {n:"Rear Delt Fly", c:"Shoulders"},
+  {n:"Reverse Pec Deck", c:"Shoulders"},
+  {n:"Upright Row", c:"Shoulders"},
+
+  // ARMS
+  {n:"Barbell Curl", c:"Arms"},
+  {n:"Dumbbell Curl", c:"Arms"},
+  {n:"Hammer Curl", c:"Arms"},
+  {n:"Incline Dumbbell Curl", c:"Arms"},
+  {n:"Preacher Curl", c:"Arms"},
+  {n:"Cable Curl", c:"Arms"},
+  {n:"Concentration Curl", c:"Arms"},
+  {n:"EZ Bar Curl", c:"Arms"},
+  {n:"Spider Curl", c:"Arms"},
+  {n:"Close Grip Bench Press", c:"Arms"},
+  {n:"Skull Crusher", c:"Arms"},
+  {n:"Tricep Pushdown", c:"Arms"},
+  {n:"Rope Tricep Pushdown", c:"Arms"},
+  {n:"Overhead Tricep Extension", c:"Arms"},
+  {n:"Dumbbell Kickback", c:"Arms"},
+  {n:"Bench Dip", c:"Arms"},
+  {n:"Tricep Dip", c:"Arms"},
+  {n:"Wrist Curl", c:"Arms"},
+  {n:"Reverse Curl", c:"Arms"},
+
+  // LEGS
+  {n:"Back Squat", c:"Legs"},
+  {n:"Front Squat", c:"Legs"},
+  {n:"Box Squat", c:"Legs"},
+  {n:"Hack Squat", c:"Legs"},
+  {n:"Smith Machine Squat", c:"Legs"},
+  {n:"Safety Bar Squat", c:"Legs"},
+  {n:"Zercher Squat", c:"Legs"},
+  {n:"Goblet Squat", c:"Legs"},
+  {n:"Bodyweight Squat", c:"Legs"},
+  {n:"Pistol Squat", c:"Legs"},
+  {n:"Leg Press", c:"Legs"},
+  {n:"Horizontal Leg Press", c:"Legs"},
+  {n:"Vertical Leg Press", c:"Legs"},
+  {n:"Leg Extension", c:"Legs"},
+  {n:"Single Leg Extension", c:"Legs"},
+  {n:"Seated Leg Curl", c:"Legs"},
+  {n:"Lying Leg Curl", c:"Legs"},
+  {n:"Nordic Curl", c:"Legs"},
+  {n:"Barbell Lunge", c:"Legs"},
+  {n:"Dumbbell Lunge", c:"Legs"},
+  {n:"Walking Lunge", c:"Legs"},
+  {n:"Bulgarian Split Squat", c:"Legs"},
+  {n:"Dumbbell Bulgarian Split Squat", c:"Legs"},
+  {n:"Hip Thrust", c:"Legs"},
+  {n:"Glute Bridge", c:"Legs"},
+  {n:"Cable Kickback", c:"Legs"},
+  {n:"Hip Abduction", c:"Legs"},
+  {n:"Hip Adduction", c:"Legs"},
+  {n:"Standing Calf Raise", c:"Legs"},
+  {n:"Seated Calf Raise", c:"Legs"},
+  {n:"Machine Calf Raise", c:"Legs"},
+  {n:"Donkey Calf Raise", c:"Legs"},
+  {n:"Hex Bar Deadlift", c:"Legs"},
+  {n:"Sumo Deadlift", c:"Legs"},
+  {n:"Pendulum Squat", c:"Legs"},
+
+  // CORE
+  {n:"Plank", c:"Core"},
+  {n:"Side Plank", c:"Core"},
+  {n:"Crunch", c:"Core"},
+  {n:"Sit-Up", c:"Core"},
+  {n:"Decline Sit-Up", c:"Core"},
+  {n:"Decline Crunch", c:"Core"},
+  {n:"Bicycle Crunch", c:"Core"},
+  {n:"Reverse Crunch", c:"Core"},
+  {n:"Hanging Leg Raise", c:"Core"},
+  {n:"Lying Leg Raise", c:"Core"},
+  {n:"Captain's Chair Leg Raise", c:"Core"},
+  {n:"Captain's Chair Knee Raise", c:"Core"},
+  {n:"Hanging Knee Raise", c:"Core"},
+  {n:"Toes to Bar", c:"Core"},
+  {n:"Cable Crunch", c:"Core"},
+  {n:"High Pulley Crunch", c:"Core"},
+  {n:"Standing Cable Crunch", c:"Core"},
+  {n:"Machine Seated Crunch", c:"Core"},
+  {n:"Ab Wheel Rollout", c:"Core"},
+  {n:"Mountain Climber", c:"Core"},
+  {n:"Flutter Kick", c:"Core"},
+  {n:"Scissor Kick", c:"Core"},
+  {n:"Russian Twist", c:"Core"},
+  {n:"Cable Woodchopper", c:"Core"},
+  {n:"Dumbbell Side Bend", c:"Core"},
+  {n:"Superman", c:"Core"},
+  {n:"Dead Bug", c:"Core"},
+  {n:"Bird Dog", c:"Core"},
+
+  // CARDIO
+  {n:"Treadmill Run", c:"Cardio"},
+  {n:"Incline Walk", c:"Cardio"},
+  {n:"Rowing Machine", c:"Cardio"},
+  {n:"Assault Bike", c:"Cardio"},
+  {n:"Stationary Bike", c:"Cardio"},
+  {n:"Stair Climber", c:"Cardio"},
+  {n:"Jump Rope", c:"Cardio"},
+  {n:"Box Jump", c:"Cardio"},
+  {n:"Burpee", c:"Cardio"},
+  {n:"Battle Ropes", c:"Cardio"},
+  {n:"Sled Push", c:"Cardio"},
+  {n:"Sled Drag", c:"Cardio"},
+  {n:"Farmer's Carry", c:"Cardio"},
+  {n:"Bear Crawl", c:"Cardio"},
+  {n:"Jumping Jack", c:"Cardio"},
+];
+
+/* ---------- constants ---------- */
 const KEY_W = 'liftoff.workouts.v1';
 const KEY_D = 'liftoff.draft.v1';
 const KEY_M = 'liftoff.meta.v1';
@@ -176,6 +378,7 @@ const KEY_HINT = 'liftoff.installHintDismissed';
 const SNAP_PREFIX = 'liftoff.snapshot.';
 const MAX_SNAPSHOTS = 8;
 const SNAPSHOT_MIN_GAP_MS = 60 * 1000;
+const MAX_PICKER_RESULTS = 60;
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g,
@@ -216,7 +419,7 @@ let meta     = loadJSON(KEY_M, {
 });
 
 let pendingSets = [blankSet()];
-let exName = '';
+let exName = ''; // currently selected exercise name
 
 function persist(){
   localStorage.setItem(KEY_W, JSON.stringify(workouts));
@@ -296,6 +499,53 @@ const volumeOf = w => Math.round(
 const bestSet = sets => sets.reduce((b, s) =>
   (s.weight > b.weight || (s.weight === b.weight && s.reps > b.reps)) ? s : b,
   sets[0]);
+
+/* ---------- exercise picker ---------- */
+function filterLibrary(query){
+  const q = query.trim().toLowerCase();
+  if (!q) return EXERCISE_LIBRARY.slice(0, MAX_PICKER_RESULTS);
+  return EXERCISE_LIBRARY
+    .filter(e => e.n.toLowerCase().includes(q) || e.c.toLowerCase().includes(q))
+    .slice(0, MAX_PICKER_RESULTS);
+}
+
+function renderPicker(){
+  const box = $('#pickerResults');
+  const query = $('#exSearch').value;
+  const matches = filterLibrary(query);
+
+  if (!query.trim()){
+    box.hidden = true;
+    return;
+  }
+
+  let html = matches.map((e, i) =>
+    `<div class="pick-item" data-action="pick-exercise" data-name="${esc(e.n)}">
+       <span>${esc(e.n)}</span>
+       <span class="pick-cat">${esc(e.c)}</span>
+     </div>`).join('');
+
+  // escape hatch for custom exercises
+  const exact = matches.some(e => e.n.toLowerCase() === query.trim().toLowerCase());
+  if (!exact){
+    html += `<div class="pick-item custom" data-action="pick-exercise" data-name="${esc(query.trim())}">
+               <span>Use custom: “${esc(query.trim())}”</span>
+               <span class="pick-cat">Custom</span>
+             </div>`;
+  }
+
+  if (!html) html = '<p class="empty" style="padding:12px">No matches.</p>';
+
+  box.innerHTML = html;
+  box.hidden = false;
+}
+
+function selectExercise(name){
+  exName = name;
+  $('#exSearch').value = name;
+  $('#selectedExercise').textContent = 'Selected: ' + name;
+  $('#pickerResults').hidden = true;
+}
 
 /* ---------- render ---------- */
 function renderPendingSets(){
@@ -644,7 +894,11 @@ document.addEventListener('click', e => {
   if (!btn) return;
   const a = btn.dataset.action;
 
-  if (a === 'add-set'){
+  if (a === 'pick-exercise'){
+    selectExercise(btn.dataset.name);
+  }
+
+  else if (a === 'add-set'){
     pendingSets.push(blankSet());
     renderPendingSets();
   }
@@ -657,7 +911,7 @@ document.addEventListener('click', e => {
 
   else if (a === 'add-exercise'){
     const name = exName.trim();
-    if (!name){ alert('Give the exercise a name first.'); return; }
+    if (!name){ alert('Search and pick an exercise first.'); return; }
     const sets = pendingSets.map(s => ({
       weight: Math.max(0, parseFloat(s.weight) || 0),
       reps:   parseInt(s.reps, 10) || 0
@@ -665,11 +919,12 @@ document.addEventListener('click', e => {
     if (!sets.length){ alert('Add at least one set with reps > 0.'); return; }
     draft.exercises.push({ id: uid(), name, sets });
     exName = '';
-    $('#exName').value = '';
+    $('#exSearch').value = '';
+    $('#selectedExercise').textContent = '';
     pendingSets = [blankSet()];
     persist();
     renderAll();
-    $('#exName').focus();
+    $('#exSearch').focus();
   }
 
   else if (a === 'rm-set'){
@@ -709,7 +964,8 @@ document.addEventListener('click', e => {
     if (!confirm('Discard this workout?')) return;
     draft = { date: todayISO(), exercises: [] };
     exName = '';
-    $('#exName').value = '';
+    $('#exSearch').value = '';
+    $('#selectedExercise').textContent = '';
     pendingSets = [blankSet()];
     persist();
     renderAll();
@@ -766,7 +1022,20 @@ window.addEventListener('pagehide', () => {
     draft.date = e.target.value || todayISO();
     persist();
   };
-  $('#exName').oninput = e => { exName = e.target.value; };
+
+  // search input
+  $('#exSearch').addEventListener('input', renderPicker);
+  $('#exSearch').addEventListener('focus', () => {
+    if ($('#exSearch').value.trim()) renderPicker();
+  });
+
+  // close picker when tapping outside
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#pickerResults') && e.target.id !== 'exSearch'){
+      $('#pickerResults').hidden = true;
+    }
+  });
+
   $('#exFilter').onchange = renderExerciseHistory;
   $('#importFile').onchange = e => {
     const f = e.target.files?.[0];
