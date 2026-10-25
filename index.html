@@ -100,18 +100,30 @@
   .snaprow .when{font-weight:500}
   .snaprow .why{color:var(--muted); font-size:12px}
   /* search picker */
-  #pickerResults{margin-top:8px; max-height:280px; overflow-y:auto;
+  #pickerResults{margin-top:8px; max-height:300px; overflow-y:auto;
                  border:1px solid var(--line); border-radius:8px;
                  background:#0f1216}
-  .pick-item{display:flex; justify-content:space-between; align-items:center;
-             padding:10px 12px; border-bottom:1px solid var(--line);
+  .pick-item{display:flex; justify-content:space-between; align-items:flex-start;
+             gap:10px; padding:10px 12px; border-bottom:1px solid var(--line);
              cursor:pointer; font-size:14px}
   .pick-item:last-child{border-bottom:none}
   .pick-item:hover{background:#232833}
-  .pick-item .pick-cat{color:var(--muted); font-size:11px;
-                       text-transform:uppercase; letter-spacing:.05em}
-  .pick-item.custom{color:var(--accent)}
+  .pick-body{flex:1; min-width:0}
+  .pick-name{font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .pick-last{font-size:11px; color:var(--accent); margin-top:2px;
+             white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.85}
+  .pick-cat{flex-shrink:0; font-size:11px; color:var(--muted);
+            text-transform:uppercase; letter-spacing:.05em; padding-top:2px}
+  .pick-item.custom .pick-name{color:var(--accent)}
   #selectedExercise{font-weight:600; color:var(--accent); margin-top:8px}
+  #lastSession{margin-top:8px}
+  .last-session{background:var(--ok-bg); border:1px solid var(--ok-line);
+                border-radius:8px; padding:10px 12px; font-size:13px;
+                color:var(--ok-fg)}
+  .last-session strong{color:#a7f0c2}
+  .last-session .sets{margin-top:4px; color:#c8f5db; font-size:13px}
+  .last-session .best{margin-top:4px; font-size:12px; color:#7ee2a8; opacity:.85}
+  .last-session .first{color:var(--muted); font-size:13px; font-style:italic}
 </style>
 </head>
 <body>
@@ -132,11 +144,11 @@
 <div class="card">
   <input type="date" id="date" />
 
-  <!-- exercise picker -->
   <input type="text" id="exSearch" placeholder="Search exercise… (e.g. bench, squat, curl)"
          style="margin-top:12px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
   <div id="pickerResults" hidden></div>
   <div id="selectedExercise"></div>
+  <div id="lastSession"></div>
 
   <div id="pendingSets"></div>
   <button class="ghost" data-action="add-set" style="margin-top:8px">＋ Add set</button>
@@ -191,8 +203,6 @@
 <script>
 /* ============================================================
    EXERCISE LIBRARY
-   A searchable subset of Liftoff's 600+ exercise library,
-   organized by muscle category.
    ============================================================ */
 const EXERCISE_LIBRARY = [
   // CHEST
@@ -401,6 +411,23 @@ function relTime(ts){
   if (d < 30) return d + 'd ago';
   return new Date(ts).toLocaleDateString();
 }
+function daysAgoISO(dateStr){
+  // dateStr is YYYY-MM-DD; compare to today (local)
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const then = new Date(y, m - 1, d).getTime();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return Math.round((today - then) / 86400000);
+}
+function shortAgo(dateStr){
+  const d = daysAgoISO(dateStr);
+  if (d <= 0) return 'today';
+  if (d === 1) return 'yesterday';
+  if (d < 7) return d + 'd ago';
+  if (d < 30) return Math.floor(d / 7) + 'w ago';
+  if (d < 365) return Math.floor(d / 30) + 'mo ago';
+  return Math.floor(d / 365) + 'y ago';
+}
 
 function loadJSON(k, fallback){
   try { return JSON.parse(localStorage.getItem(k)) ?? fallback; }
@@ -419,7 +446,7 @@ let meta     = loadJSON(KEY_M, {
 });
 
 let pendingSets = [blankSet()];
-let exName = ''; // currently selected exercise name
+let exName = '';
 
 function persist(){
   localStorage.setItem(KEY_W, JSON.stringify(workouts));
@@ -433,6 +460,35 @@ async function requestPersistence(){
       await navigator.storage.persist();
     }
   } catch {}
+}
+
+/* ---------- "last session" lookups ---------- */
+function sortedWorkoutsDesc(){
+  return [...workouts].sort((a, b) =>
+    b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+function lastSessionFor(name){
+  const key = name.toLowerCase().trim();
+  for (const w of sortedWorkoutsDesc()){
+    for (const e of w.exercises){
+      if (e.name.toLowerCase().trim() === key){
+        return { date: w.date, sets: e.sets, createdAt: w.createdAt || 0 };
+      }
+    }
+  }
+  return null;
+}
+
+function buildLastMap(){
+  const map = {};
+  for (const w of sortedWorkoutsDesc()){
+    for (const e of w.exercises){
+      const k = e.name.toLowerCase().trim();
+      if (!(k in map)) map[k] = { date: w.date, sets: e.sets };
+    }
+  }
+  return map;
 }
 
 /* ---------- snapshot engine ---------- */
@@ -512,26 +568,47 @@ function filterLibrary(query){
 function renderPicker(){
   const box = $('#pickerResults');
   const query = $('#exSearch').value;
-  const matches = filterLibrary(query);
 
   if (!query.trim()){
     box.hidden = true;
     return;
   }
 
-  let html = matches.map((e, i) =>
-    `<div class="pick-item" data-action="pick-exercise" data-name="${esc(e.n)}">
-       <span>${esc(e.n)}</span>
-       <span class="pick-cat">${esc(e.c)}</span>
-     </div>`).join('');
+  const lastMap = buildLastMap();
+  const matches = filterLibrary(query);
 
-  // escape hatch for custom exercises
+  let html = matches.map(e => {
+    const last = lastMap[e.n.toLowerCase().trim()];
+    let lastHtml = '';
+    if (last && last.sets.length){
+      const b = bestSet(last.sets);
+      lastHtml = `<div class="pick-last">Last: ${b.weight}kg × ${b.reps} · ${shortAgo(last.date)}</div>`;
+    }
+    return `<div class="pick-item" data-action="pick-exercise" data-name="${esc(e.n)}">
+      <div class="pick-body">
+        <div class="pick-name">${esc(e.n)}</div>
+        ${lastHtml}
+      </div>
+      <div class="pick-cat">${esc(e.c)}</div>
+    </div>`;
+  }).join('');
+
   const exact = matches.some(e => e.n.toLowerCase() === query.trim().toLowerCase());
   if (!exact){
-    html += `<div class="pick-item custom" data-action="pick-exercise" data-name="${esc(query.trim())}">
-               <span>Use custom: “${esc(query.trim())}”</span>
-               <span class="pick-cat">Custom</span>
-             </div>`;
+    const trimmed = query.trim();
+    const lastCustom = lastMap[trimmed.toLowerCase()];
+    let lastHtml = '';
+    if (lastCustom && lastCustom.sets.length){
+      const b = bestSet(lastCustom.sets);
+      lastHtml = `<div class="pick-last">Last: ${b.weight}kg × ${b.reps} · ${shortAgo(lastCustom.date)}</div>`;
+    }
+    html += `<div class="pick-item custom" data-action="pick-exercise" data-name="${esc(trimmed)}">
+      <div class="pick-body">
+        <div class="pick-name">Use custom: “${esc(trimmed)}”</div>
+        ${lastHtml}
+      </div>
+      <div class="pick-cat">Custom</div>
+    </div>`;
   }
 
   if (!html) html = '<p class="empty" style="padding:12px">No matches.</p>';
@@ -540,11 +617,53 @@ function renderPicker(){
   box.hidden = false;
 }
 
+function renderLastSession(){
+  const el = $('#lastSession');
+  if (!exName){ el.innerHTML = ''; return; }
+  const last = lastSessionFor(exName);
+  if (!last){
+    el.innerHTML = `<div class="last-session">
+      <span class="first">First time logging “${esc(exName)}” — no history yet.</span>
+    </div>`;
+    return;
+  }
+  const b = bestSet(last.sets);
+  const setsStr = last.sets.map(s => `${s.weight}×${s.reps}`).join(' · ');
+  el.innerHTML = `<div class="last-session">
+    <div><strong>Last session</strong> · ${shortAgo(last.date)} (${last.date})</div>
+    <div class="sets">${esc(setsStr)}</div>
+    <div class="best">Best: ${b.weight}kg × ${b.reps} reps · ${last.sets.length} set${last.sets.length === 1 ? '' : 's'} · pre-filled below</div>
+  </div>`;
+}
+
 function selectExercise(name){
   exName = name;
   $('#exSearch').value = name;
   $('#selectedExercise').textContent = 'Selected: ' + name;
   $('#pickerResults').hidden = true;
+
+  // Pre-fill pending sets from last session
+  const last = lastSessionFor(name);
+  if (last && last.sets.length){
+    pendingSets = last.sets.map(s => ({
+      weight: String(s.weight),
+      reps:   String(s.reps)
+    }));
+  } else {
+    pendingSets = [blankSet()];
+  }
+
+  renderPendingSets();
+  renderLastSession();
+}
+
+function clearExerciseSelection(){
+  exName = '';
+  $('#exSearch').value = '';
+  $('#selectedExercise').textContent = '';
+  $('#lastSession').innerHTML = '';
+  pendingSets = [blankSet()];
+  renderPendingSets();
 }
 
 /* ---------- render ---------- */
@@ -918,10 +1037,7 @@ document.addEventListener('click', e => {
     })).filter(s => s.reps > 0);
     if (!sets.length){ alert('Add at least one set with reps > 0.'); return; }
     draft.exercises.push({ id: uid(), name, sets });
-    exName = '';
-    $('#exSearch').value = '';
-    $('#selectedExercise').textContent = '';
-    pendingSets = [blankSet()];
+    clearExerciseSelection();
     persist();
     renderAll();
     $('#exSearch').focus();
@@ -956,6 +1072,7 @@ document.addEventListener('click', e => {
     persist();
     autoSnapshot('after finish');
     autoBackupAfterWorkout();
+    clearExerciseSelection();
     renderAll();
   }
 
@@ -963,10 +1080,7 @@ document.addEventListener('click', e => {
     if (!draft.exercises.length) return;
     if (!confirm('Discard this workout?')) return;
     draft = { date: todayISO(), exercises: [] };
-    exName = '';
-    $('#exSearch').value = '';
-    $('#selectedExercise').textContent = '';
-    pendingSets = [blankSet()];
+    clearExerciseSelection();
     persist();
     renderAll();
   }
@@ -1023,13 +1137,11 @@ window.addEventListener('pagehide', () => {
     persist();
   };
 
-  // search input
   $('#exSearch').addEventListener('input', renderPicker);
   $('#exSearch').addEventListener('focus', () => {
     if ($('#exSearch').value.trim()) renderPicker();
   });
 
-  // close picker when tapping outside
   document.addEventListener('click', e => {
     if (!e.target.closest('#pickerResults') && e.target.id !== 'exSearch'){
       $('#pickerResults').hidden = true;
