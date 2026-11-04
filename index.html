@@ -475,7 +475,7 @@
 <div class="card" id="recovery"></div>
 
 <p style="text-align:center;color:#8b93a1;font-size:11px;margin-top:30px">
-  v8 · built 2026-11-04
+  v9 · built 2026-11-04
 </p>
 
 <p style="text-align:center; margin:6px 0 18px">
@@ -682,7 +682,7 @@ const MAX_PICKER_RESULTS = 60;
 
 const CREDIT_START = 1000;
 const GOLDEN_THRESHOLD = 1000000;
-const PLINKO_TALLY_DELAY = 2000; /* ms after last ball lands */
+const PLINKO_TALLY_DELAY = 2000;
 
 const SUITS = ['♠','♥','♦','♣'];
 const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
@@ -774,7 +774,6 @@ let moon = { phase:'idle', bet:0, multiplier:1.00, crashPoint:0,
              startTime:0, cashedOut:false, cashoutMult:0 };
 let moonStars = null;
 
-/* coin flip */
 let coinState = {
   rotation: 0,
   startRotation: 0,
@@ -787,7 +786,6 @@ let coinState = {
   pendingBet: 0
 };
 
-/* plinko */
 const PLINKO_ROWS = 8;
 const PLINKO_SLOTS = 9;
 const PLINKO_MULTS = [5.6, 2.1, 1.1, 1.0, 0.5, 1.0, 1.1, 2.1, 5.6];
@@ -797,7 +795,6 @@ const PLINKO_MAX_BALLS = 40;
 let plinkoBalls = [];
 let plinkoTickRunning = false;
 
-/* plinko cluster — accumulates until 2s after the last ball lands */
 let plinkoCluster = {
   net: 0,
   betSum: 0,
@@ -805,7 +802,6 @@ let plinkoCluster = {
   timer: null
 };
 
-/* audio + feedback */
 let audioCtx = null;
 let lastWinSoundAt = 0;
 let lastLossSoundAt = 0;
@@ -1468,6 +1464,7 @@ function feedCricket(amount){
   persist();
   playFeedThanks();
   renderCasino();
+  renderPet();
   return true;
 }
 
@@ -1804,7 +1801,6 @@ function drawCoin(){
   const scaleX = Math.max(Math.abs(cosA), 0.03);
   const showHeads = cosA >= 0;
 
-  /* shadow */
   ctx.beginPath();
   ctx.ellipse(cx, cy + r + 16, r * 0.8 * scaleX, 8, 0, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(0,0,0,0.32)';
@@ -1814,7 +1810,6 @@ function drawCoin(){
   ctx.translate(cx, cy);
   ctx.scale(scaleX, 1);
 
-  /* coin body */
   const grad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.15, 0, 0, r);
   grad.addColorStop(0, '#fff3c4');
   grad.addColorStop(0.4, '#f5c842');
@@ -1828,14 +1823,12 @@ function drawCoin(){
   ctx.lineWidth = 2.5;
   ctx.stroke();
 
-  /* inner ring */
   ctx.beginPath();
   ctx.arc(0, 0, r - 11, 0, Math.PI * 2);
   ctx.strokeStyle = 'rgba(255,240,180,0.55)';
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  /* face symbol */
   ctx.fillStyle = '#4a3600';
   ctx.font = 'bold 64px -apple-system, sans-serif';
   ctx.textAlign = 'center';
@@ -1859,7 +1852,7 @@ function coinFlip(side){
   coinState.pendingBet = bet;
 
   const startRot = coinState.rotation;
-  const extraSpins = 16 * Math.PI; /* 8 full turns */
+  const extraSpins = 16 * Math.PI;
   let endRot = startRot + extraSpins;
   const wantHeads = (result === 'heads');
   const willShowHeads = Math.cos(endRot) >= 0;
@@ -2259,7 +2252,6 @@ function plinkoTick(){
   else { plinkoTickRunning = false; }
 }
 
-/* Add to the cluster — no per-ball win/loss visuals. */
 function resolvePlinkoBall(b){
   const mult = PLINKO_MULTS[b.slot];
   const payout = Math.floor(b.bet * mult);
@@ -2288,7 +2280,6 @@ function updatePlinkoLiveMessage(){
     net > 0 ? 'win' : net < 0 ? 'lose' : '');
 }
 
-/* Fires 2s after the last ball lands — one visual for the whole cluster. */
 function tallyPlinkoCluster(){
   plinkoCluster.timer = null;
   if (!plinkoCluster.active) return;
