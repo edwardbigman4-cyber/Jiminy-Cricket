@@ -1,0 +1,1 @@
+make a visual for the coin flip. For plinko Specifically, wait until 2 seconds after the last ball to tally the net win/loss for that cluster of drops, and then display the win/loss visual with the net credits won. Do not display the win/loss after every individual plinko drop.
