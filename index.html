@@ -101,7 +101,6 @@
   .snaprow .meta{flex:1}
   .snaprow .when{font-weight:500}
   .snaprow .why{color:var(--muted); font-size:12px}
-  /* search picker */
   #pickerResults{margin-top:8px; max-height:300px; overflow-y:auto;
                  border:1px solid var(--line); border-radius:8px;
                  background:#0f1216}
@@ -159,19 +158,105 @@
   .spin-dot.black{background:#222}
   .spin-dot.green{background:#1e7a44}
   #rouletteCanvas{display:block; margin:0 auto; width:100%; max-width:280px}
-  /* moon */
-  .moon-display{text-align:center; padding:22px 16px; background:#0f1216;
+  #moonCanvas{display:block; margin:0 auto; width:100%; max-width:320px;
+              background: radial-gradient(ellipse at 50% 110%, #142033 0%, #04060a 70%);
+              border-radius:10px; border:1px solid var(--line)}
+  .moon-display{text-align:center; padding:16px 12px 18px; background:#0f1216;
                 border-radius:10px; border:1px solid var(--line);
-                position:relative; overflow:hidden}
+                position:relative; overflow:hidden; margin-top:10px}
   .moon-mult{font-size:44px; font-weight:800; line-height:1; color:var(--accent);
              font-variant-numeric:tabular-nums; transition:color .2s}
-  .moon-bar{height:4px; background:#262a33; margin:16px auto 0; max-width:200px;
+  .moon-bar{height:4px; background:#262a33; margin:14px auto 0; max-width:200px;
             border-radius:2px; overflow:hidden}
   .moon-bar-fill{height:100%; width:0%; background:var(--accent);
                  transition:width .08s linear}
-  /* plinko */
   #plinkoCanvas{display:block; margin:0 auto; width:100%; max-width:340px;
                 background:#0f1216; border-radius:10px}
+
+  /* ---------- win popup ---------- */
+  #winPopup{
+    position:fixed; inset:0; z-index:9999;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  #winPopup[hidden]{display:none}
+  #winPopup .popup-card{
+    background: linear-gradient(135deg, #0e3d22 0%, #134a2a 50%, #0e3d22 100%);
+    border: 2px solid var(--accent);
+    border-radius: 20px;
+    padding: 22px 30px 18px;
+    text-align: center;
+    box-shadow:
+      0 0 40px rgba(74,222,128,0.55),
+      0 0 80px rgba(74,222,128,0.25),
+      inset 0 0 40px rgba(74,222,128,0.15);
+    animation: popIn 0.32s cubic-bezier(0.2,1.6,0.5,1);
+    pointer-events: none;
+    min-width: 220px;
+  }
+  #winPopup .cricket-stage{
+    display:flex; align-items:center; justify-content:center; gap: 4px;
+    line-height: 1;
+  }
+  #winPopup .cricket{
+    font-size: 84px; line-height: 1;
+    display: inline-block;
+    animation: cricketHop 0.42s ease-in-out infinite;
+    filter: drop-shadow(0 0 14px rgba(74,222,128,0.9))
+            drop-shadow(0 0 4px rgba(255,255,255,0.5));
+  }
+  #winPopup .muscle{
+    font-size: 46px; line-height: 1;
+    display: inline-block;
+    animation: musclePump 0.42s ease-in-out infinite;
+    filter: drop-shadow(0 0 8px rgba(255,200,80,0.7));
+  }
+  #winPopup .muscle.left{animation-delay: -0.21s}
+  #winPopup .muscle.right{animation-delay: 0s}
+  #winPopup .popup-amount{
+    font-size: 34px; font-weight: 800; color: var(--accent);
+    margin-top: 8px; letter-spacing: 0.5px;
+    text-shadow: 0 0 18px rgba(74,222,128,0.9);
+    font-variant-numeric: tabular-nums;
+  }
+  #winPopup .popup-sub{
+    font-size: 12px; color: #a7f0c2;
+    text-transform: uppercase; letter-spacing: 0.15em;
+    margin-top: 2px;
+  }
+  @keyframes cricketHop{
+    0%, 100%{transform: translateY(0) rotate(-6deg) scale(1)}
+    50%    {transform: translateY(-26px) rotate(6deg) scale(1.05)}
+  }
+  @keyframes musclePump{
+    0%, 100%{transform: scale(1) rotate(-8deg)}
+    50%    {transform: scale(1.3) rotate(10deg)}
+  }
+  @keyframes popIn{
+    from{transform: scale(0.5) rotate(-4deg); opacity: 0}
+    to  {transform: scale(1) rotate(0); opacity: 1}
+  }
+
+  /* ---------- loss flash ---------- */
+  #lossFlash{
+    position: fixed; inset: 0; pointer-events: none; z-index: 9998;
+    background:
+      radial-gradient(ellipse at center,
+        rgba(248,113,113,0.85) 0%,
+        rgba(220,38,38,0.95) 60%,
+        rgba(120,15,15,1) 100%);
+    opacity: 0;
+  }
+  #lossFlash.flash{ animation: lossFlashAnim 1.05s ease-out; }
+  @keyframes lossFlashAnim{
+    0%   {opacity: 0}
+    8%   {opacity: 0.9}
+    22%  {opacity: 0.15}
+    38%  {opacity: 0.85}
+    52%  {opacity: 0.2}
+    68%  {opacity: 0.7}
+    100% {opacity: 0}
+  }
 </style>
 </head>
 <body>
@@ -191,20 +276,16 @@
 <h2>Current workout</h2>
 <div class="card">
   <input type="date" id="date" />
-
   <input type="text" id="exSearch" placeholder="Search exercise… (e.g. bench, squat, curl)"
          style="margin-top:12px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
   <div id="pickerResults" hidden></div>
   <div id="selectedExercise"></div>
   <div id="lastSession"></div>
-
   <div id="pendingSets"></div>
   <button class="ghost" data-action="add-set" style="margin-top:8px">＋ Add set</button>
   <button class="primary" data-action="add-exercise"
           style="margin-top:12px; width:100%">Add exercise</button>
-
   <div id="draftList" style="margin-top:14px"></div>
-
   <div class="row" style="margin-top:16px">
     <button class="primary" data-action="finish">Finish workout</button>
     <button class="ghost shrink" data-action="discard">Discard</button>
@@ -286,6 +367,7 @@
   </div>
 
   <div id="tab-moon" class="tabpane" hidden>
+    <canvas id="moonCanvas"></canvas>
     <div class="moon-display">
       <div class="moon-mult" id="moonMult">1.00×</div>
       <div class="moon-bar"><div class="moon-bar-fill" id="moonBar"></div></div>
@@ -306,6 +388,9 @@
     <button class="primary" data-action="plinko-drop" id="plinkoDropBtn"
             style="margin-top:10px; width:100%">Drop Ball</button>
     <div class="result" id="res-plinko"></div>
+    <p class="muted" style="margin-top:8px; text-align:center">
+      Tap repeatedly to drop multiple balls — they'll fall one after another.
+    </p>
   </div>
 
   <p class="muted" style="margin:14px 0 0">
@@ -346,8 +431,22 @@
 <div class="card" id="recovery"></div>
 
 <p style="text-align:center;color:#8b93a1;font-size:11px;margin-top:30px">
-  v5 · built 2026-11-04
+  v6 · built 2026-11-04
 </p>
+
+<!-- win/loss feedback overlays -->
+<div id="lossFlash"></div>
+<div id="winPopup" hidden>
+  <div class="popup-card">
+    <div class="cricket-stage">
+      <span class="muscle left">💪</span>
+      <span class="cricket">🦗</span>
+      <span class="muscle right">💪</span>
+    </div>
+    <div class="popup-amount" id="winAmount">+0</div>
+    <div class="popup-sub">credits!</div>
+  </div>
+</div>
 
 <script>
 /* ============================================================
@@ -377,7 +476,6 @@ const EXERCISE_LIBRARY = [
   {n:"Svend Press", c:"Chest"},
   {n:"Landmine Chest Press", c:"Chest"},
   {n:"Dumbbell Pullover", c:"Chest"},
-
   {n:"Deadlift", c:"Back"},
   {n:"Romanian Deadlift", c:"Back"},
   {n:"Stiff Leg Deadlift", c:"Back"},
@@ -402,7 +500,6 @@ const EXERCISE_LIBRARY = [
   {n:"Good Morning", c:"Back"},
   {n:"Back Extension", c:"Back"},
   {n:"Reverse Hyperextension", c:"Back"},
-
   {n:"Overhead Press", c:"Shoulders"},
   {n:"Barbell Shoulder Press", c:"Shoulders"},
   {n:"Dumbbell Shoulder Press", c:"Shoulders"},
@@ -419,7 +516,6 @@ const EXERCISE_LIBRARY = [
   {n:"Rear Delt Fly", c:"Shoulders"},
   {n:"Reverse Pec Deck", c:"Shoulders"},
   {n:"Upright Row", c:"Shoulders"},
-
   {n:"Barbell Curl", c:"Arms"},
   {n:"Dumbbell Curl", c:"Arms"},
   {n:"Hammer Curl", c:"Arms"},
@@ -439,7 +535,6 @@ const EXERCISE_LIBRARY = [
   {n:"Tricep Dip", c:"Arms"},
   {n:"Wrist Curl", c:"Arms"},
   {n:"Reverse Curl", c:"Arms"},
-
   {n:"Back Squat", c:"Legs"},
   {n:"Front Squat", c:"Legs"},
   {n:"Box Squat", c:"Legs"},
@@ -475,7 +570,6 @@ const EXERCISE_LIBRARY = [
   {n:"Hex Bar Deadlift", c:"Legs"},
   {n:"Sumo Deadlift", c:"Legs"},
   {n:"Pendulum Squat", c:"Legs"},
-
   {n:"Plank", c:"Core"},
   {n:"Side Plank", c:"Core"},
   {n:"Crunch", c:"Core"},
@@ -504,7 +598,6 @@ const EXERCISE_LIBRARY = [
   {n:"Superman", c:"Core"},
   {n:"Dead Bug", c:"Core"},
   {n:"Bird Dog", c:"Core"},
-
   {n:"Treadmill Run", c:"Cardio"},
   {n:"Incline Walk", c:"Cardio"},
   {n:"Rowing Machine", c:"Cardio"},
@@ -537,7 +630,6 @@ const MAX_PICKER_RESULTS = 60;
 const CREDIT_START = 1000;
 const WORKOUT_BONUS = 100;
 
-/* ---------- playing cards (defined before bj state init) ---------- */
 const SUITS = ['♠','♥','♦','♣'];
 const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const RED_NUMBERS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
@@ -595,7 +687,6 @@ function shortAgo(dateStr){
   if (d < 365) return Math.floor(d / 30) + 'mo ago';
   return Math.floor(d / 365) + 'y ago';
 }
-
 function loadJSON(k, fallback){
   try { return JSON.parse(localStorage.getItem(k)) ?? fallback; }
   catch { return fallback; }
@@ -605,50 +696,47 @@ function loadJSON(k, fallback){
 let workouts = loadJSON(KEY_W, []);
 let draft    = loadJSON(KEY_D, { date: todayISO(), exercises: [] });
 let meta     = loadJSON(KEY_M, {
-  lastBackupAt: null,
-  lastSnapshotAt: null,
-  autoDownload: true,
-  autoSnapshot: true,
-  dirty: false,
-  balance: CREDIT_START
+  lastBackupAt: null, lastSnapshotAt: null,
+  autoDownload: true, autoSnapshot: true, dirty: false, balance: CREDIT_START
 });
-if (typeof meta.balance !== 'number' || !isFinite(meta.balance)){
-  meta.balance = CREDIT_START;
-}
+if (typeof meta.balance !== 'number' || !isFinite(meta.balance)) meta.balance = CREDIT_START;
 
 let customExercises = loadJSON(KEY_CX, []);
 if (!Array.isArray(customExercises)) customExercises = [];
 customExercises = customExercises.filter(e => e && typeof e.n === 'string');
 
 let bj = loadJSON(KEY_BJ, null);
-if (!bj || !Array.isArray(bj.deck) || !Array.isArray(bj.player)
-    || !Array.isArray(bj.dealer)) {
+if (!bj || !Array.isArray(bj.deck) || !Array.isArray(bj.player) || !Array.isArray(bj.dealer)){
   bj = freshBJ();
 }
 
-/* new-game state */
+/* roulette state */
 let rouletteRotation = 0;
 let rouletteAnimating = false;
 let rouletteHistory = [];
 
-let moon = {
-  phase: 'idle',
-  bet: 0,
-  multiplier: 1.00,
-  crashPoint: 0,
-  startTime: 0,
-  cashedOut: false,
-  cashoutMult: 0
-};
+/* moon state */
+let moon = { phase:'idle', bet:0, multiplier:1.00, crashPoint:0,
+             startTime:0, cashedOut:false, cashoutMult:0 };
+let moonStars = null;
 
-let plinkoAnim = null;
-let plinkoLastBall = null;
-
+/* plinko state */
 const PLINKO_ROWS = 8;
 const PLINKO_SLOTS = 9;
 const PLINKO_MULTS = [5.6, 2.1, 1.1, 1.0, 0.5, 1.0, 1.1, 2.1, 5.6];
 const PLINKO_COLORS = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#3498db',
                        '#2ecc71','#f1c40f','#e67e22','#e74c3c'];
+const PLINKO_MAX_BALLS = 40;
+let plinkoBalls = [];
+let plinkoTickRunning = false;
+
+/* audio + feedback state */
+let audioCtx = null;
+let lastWinSoundAt = 0;
+let lastLossSoundAt = 0;
+let winPopupTotal = 0;
+let winPopupLastUpdate = 0;
+let winPopupTimer = null;
 
 let creditNote = '';
 let pendingSets = [blankSet()];
@@ -660,13 +748,113 @@ function persist(){
   localStorage.setItem(KEY_M, JSON.stringify(meta));
   localStorage.setItem(KEY_CX, JSON.stringify(customExercises));
 }
-
 async function requestPersistence(){
   try {
-    if (navigator.storage?.persist && !(await navigator.storage.persisted?.())) {
+    if (navigator.storage?.persist && !(await navigator.storage.persisted?.())){
       await navigator.storage.persist();
     }
   } catch {}
+}
+
+/* ---------- audio ---------- */
+function ensureAudio(){
+  if (!audioCtx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try { audioCtx = new AC(); } catch { return null; }
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  return audioCtx;
+}
+document.addEventListener('pointerdown', ensureAudio, { passive: true });
+
+function playWinSound(){
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const notes = [523.25, 659.25, 783.99, 1046.50];
+  notes.forEach((f, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = f;
+    const start = now + i * 0.085;
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.linearRampToValueAtTime(0.15, start + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.26);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(start); osc.stop(start + 0.28);
+  });
+  const spark = ctx.createOscillator();
+  const sg = ctx.createGain();
+  spark.type = 'sine';
+  spark.frequency.setValueAtTime(1568, now + 0.36);
+  spark.frequency.exponentialRampToValueAtTime(2093, now + 0.5);
+  sg.gain.setValueAtTime(0.0001, now + 0.36);
+  sg.gain.linearRampToValueAtTime(0.10, now + 0.40);
+  sg.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+  spark.connect(sg); sg.connect(ctx.destination);
+  spark.start(now + 0.36); spark.stop(now + 0.58);
+}
+function playSirenSound(){
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const dur = 1.1;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(650, now);
+  const cycles = 6, per = dur / cycles;
+  for (let i = 0; i < cycles; i++){
+    osc.frequency.linearRampToValueAtTime(1050, now + i * per + per / 2);
+    osc.frequency.linearRampToValueAtTime(650,  now + (i + 1) * per);
+  }
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.linearRampToValueAtTime(0.11, now + 0.05);
+  gain.gain.setValueAtTime(0.11, now + dur - 0.1);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(now); osc.stop(now + dur + 0.05);
+}
+
+/* ---------- win/loss feedback ---------- */
+function notifyWin(amount){
+  if (!(amount > 0)) return;
+  const now = performance.now();
+  if (winPopupTimer && now - winPopupLastUpdate < 600){
+    winPopupTotal += amount;
+  } else {
+    winPopupTotal = amount;
+  }
+  winPopupLastUpdate = now;
+  const amountEl = $('#winAmount');
+  if (amountEl) amountEl.textContent = '+' + winPopupTotal.toLocaleString();
+  const popup = $('#winPopup');
+  if (popup) popup.hidden = false;
+  if (winPopupTimer) clearTimeout(winPopupTimer);
+  winPopupTimer = setTimeout(() => {
+    if (popup) popup.hidden = true;
+    winPopupTotal = 0;
+    winPopupTimer = null;
+  }, 1600);
+  if (now - lastWinSoundAt > 60){
+    lastWinSoundAt = now;
+    playWinSound();
+  }
+}
+function notifyLoss(){
+  const flash = $('#lossFlash');
+  if (flash){
+    flash.classList.remove('flash');
+    void flash.offsetWidth;
+    flash.classList.add('flash');
+  }
+  const now = performance.now();
+  if (now - lastLossSoundAt > 350){
+    lastLossSoundAt = now;
+    playSirenSound();
+  }
 }
 
 /* ---------- custom exercises ---------- */
@@ -916,10 +1104,7 @@ function renderDraft(){
 }
 function renderHistory(){
   const h = $('#history');
-  if (!workouts.length){
-    h.innerHTML = '<p class="empty">No workouts saved yet.</p>';
-    return;
-  }
+  if (!workouts.length){ h.innerHTML = '<p class="empty">No workouts saved yet.</p>'; return; }
   h.innerHTML = [...workouts]
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
     .map(w => {
@@ -1092,7 +1277,6 @@ async function renderStorage(){
       (persisted ? ' · persistent' : '');
   } catch {}
 }
-
 function renderAll(){
   renderPendingSets();
   renderDraft();
@@ -1110,11 +1294,9 @@ function renderAll(){
 }
 
 /* ============================================================
-   CASINO — fake credits only
+   CASINO
    ============================================================ */
-function saveBJ(){
-  try { localStorage.setItem(KEY_BJ, JSON.stringify(bj)); } catch {}
-}
+function saveBJ(){ try { localStorage.setItem(KEY_BJ, JSON.stringify(bj)); } catch {} }
 function handValue(cards){
   let total = 0, aces = 0;
   for (const c of cards){
@@ -1196,9 +1378,11 @@ function bjDeal(){
       meta.balance += payout;
       bj.result = `Blackjack! Paid 3:2 (+${payout - bet}).`;
       bj.kind = 'win';
+      notifyWin(payout - bet);
     } else {
       bj.result = 'Dealer blackjack — you lose.';
       bj.kind = 'lose';
+      notifyLoss();
     }
   }
   saveBJ(); persist(); renderCasino();
@@ -1211,6 +1395,7 @@ function bjHit(){
     bj.phase = 'done';
     bj.result = 'Bust — you lose.';
     bj.kind = 'lose';
+    notifyLoss();
   } else if (v === 21){ bjStand(); return; }
   saveBJ(); renderCasino();
 }
@@ -1223,10 +1408,12 @@ function bjStand(){
     meta.balance += bj.bet * 2;
     bj.result = `Dealer busts with ${d} — you win +${bj.bet}.`;
     bj.kind = 'win';
+    notifyWin(bj.bet);
   } else if (p > d){
     meta.balance += bj.bet * 2;
     bj.result = `${p} beats ${d} — you win +${bj.bet}.`;
     bj.kind = 'win';
+    notifyWin(bj.bet);
   } else if (p === d){
     meta.balance += bj.bet;
     bj.result = `Push at ${p} — bet returned.`;
@@ -1234,6 +1421,7 @@ function bjStand(){
   } else {
     bj.result = `Dealer wins ${d} to ${p}.`;
     bj.kind = 'lose';
+    notifyLoss();
   }
   saveBJ(); persist(); renderCasino();
 }
@@ -1247,6 +1435,7 @@ function bjDouble(){
     bj.phase = 'done';
     bj.result = 'Bust on the double — you lose.';
     bj.kind = 'lose';
+    notifyLoss();
     saveBJ(); persist(); renderCasino();
     return;
   }
@@ -1270,11 +1459,8 @@ function drawRoulette(rotation){
   const ctx = canvas.getContext('2d');
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
-
   const cx = W/2, cy = H/2, radius = 115;
   const arc = 2 * Math.PI / 37;
-
-  /* outer ring */
   ctx.beginPath();
   ctx.arc(cx, cy, radius + 8, 0, Math.PI * 2);
   ctx.fillStyle = '#181b21';
@@ -1282,19 +1468,15 @@ function drawRoulette(rotation){
   ctx.strokeStyle = '#2b3240';
   ctx.lineWidth = 2;
   ctx.stroke();
-
-  /* pockets */
   for (let i = 0; i < 37; i++){
     const num = WHEEL_ORDER[i];
     const centerAngle = -Math.PI/2 + i * arc + rotation;
     const startAngle = centerAngle - arc/2;
     const endAngle = centerAngle + arc/2;
-
     let color;
     if (num === 0) color = '#1e7a44';
     else if (RED_NUMBERS.has(num)) color = '#c0392b';
     else color = '#222';
-
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, radius, startAngle, endAngle);
@@ -1305,8 +1487,6 @@ function drawRoulette(rotation){
     ctx.lineWidth = 1;
     ctx.stroke();
   }
-
-  /* numbers */
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 11px -apple-system, sans-serif';
   ctx.textAlign = 'center';
@@ -1322,8 +1502,6 @@ function drawRoulette(rotation){
     ctx.fillText(String(num), 0, 0);
     ctx.restore();
   }
-
-  /* hub */
   ctx.beginPath();
   ctx.arc(cx, cy, 32, 0, Math.PI * 2);
   ctx.fillStyle = '#181b21';
@@ -1331,8 +1509,6 @@ function drawRoulette(rotation){
   ctx.strokeStyle = '#2b3240';
   ctx.lineWidth = 2;
   ctx.stroke();
-
-  /* pointer */
   ctx.beginPath();
   ctx.moveTo(cx, cy - radius + 4);
   ctx.lineTo(cx - 9, cy - radius - 18);
@@ -1357,7 +1533,6 @@ function rouletteSpin(){
   const bet = readBet();
   if (!bet) return gameMsg('rl', 'Enter a valid bet first.', 'lose');
   if (bet > meta.balance) return gameMsg('rl', 'Not enough credits.', 'lose');
-
   const type = $('#rouletteType').value;
   let picked = null;
   if (type === 'number'){
@@ -1366,31 +1541,25 @@ function rouletteSpin(){
       return gameMsg('rl', 'Pick a number between 0 and 36.', 'lose');
     }
   }
-
   meta.balance -= bet;
-  persist();
-  renderBalance();
-
+  persist(); renderBalance();
   const n = Math.floor(Math.random() * 37);
   const winningIndex = WHEEL_ORDER.indexOf(n);
   const arc = 2 * Math.PI / 37;
   const offset = (Math.random() - 0.5) * arc * 0.6;
   const finalRotation = -winningIndex * arc + offset + 2 * Math.PI * 6;
-
   rouletteAnimating = true;
   const spinBtn = $('#rlSpinBtn');
   if (spinBtn) spinBtn.disabled = true;
   const startTime = performance.now();
   const duration = 4200;
-
   function step(){
     const t = Math.min(1, (performance.now() - startTime) / duration);
     const eased = 1 - Math.pow(1 - t, 3);
     rouletteRotation = finalRotation * eased;
     drawRoulette(rouletteRotation);
-    if (t < 1){
-      requestAnimationFrame(step);
-    } else {
+    if (t < 1){ requestAnimationFrame(step); }
+    else {
       rouletteAnimating = false;
       if (spinBtn) spinBtn.disabled = false;
       finishRouletteSpin(n, type, picked, bet);
@@ -1415,8 +1584,10 @@ function finishRouletteSpin(n, type, picked, bet){
   const label = `Ball lands on ${n} (${color}).`;
   if (win > 0){
     gameMsg('rl', `${label} You win +${win - bet} credits.`, 'win');
+    notifyWin(win - bet);
   } else {
     gameMsg('rl', `${label} You lose ${bet} credits.`, 'lose');
+    notifyLoss();
   }
   persist(); renderCasino();
 }
@@ -1431,18 +1602,117 @@ function coinFlip(side){
   if (result === side){
     meta.balance += bet * 2;
     gameMsg('cf', `It's ${result} — you win +${bet} credits.`, 'win');
+    notifyWin(bet);
   } else {
     gameMsg('cf', `It's ${result} — you lose ${bet} credits.`, 'lose');
+    notifyLoss();
   }
   persist(); renderCasino();
 }
 
-/* ----- To the Moon (crash) ----- */
+/* ----- Moon (crash) ----- */
 function moonColor(mult){
   if (mult < 2) return 'var(--accent)';
   if (mult < 5) return '#f1c40f';
   if (mult < 10) return '#e67e22';
   return '#e74c3c';
+}
+function moonInitStars(){
+  moonStars = [];
+  for (let i = 0; i < 44; i++){
+    moonStars.push({
+      x: Math.random() * 320,
+      y: Math.random() * 220,
+      r: Math.random() * 1.6 + 0.4,
+      speed: Math.random() * 0.6 + 0.3
+    });
+  }
+}
+function moonDraw(progress, crashed){
+  const canvas = $('#moonCanvas');
+  if (!canvas) return;
+  const DPR = window.devicePixelRatio || 1;
+  const W = 320, H = 220;
+  if (canvas.width !== W * DPR || canvas.height !== H * DPR){
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  if (!moonStars) moonInitStars();
+
+  /* scrolling starfield — gives upward motion feel */
+  const scroll = progress * 500;
+  for (const s of moonStars){
+    const y = ((s.y + scroll * s.speed) % H + H) % H;
+    ctx.beginPath();
+    ctx.arc(s.x, y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(230,232,235,${0.25 + s.r * 0.35})`;
+    ctx.fill();
+  }
+
+  /* rocket position */
+  const rx = 40 + progress * (W - 100);
+  const ry = H - 40 - progress * (H - 80);
+
+  /* flame */
+  if (!crashed){
+    const flameLen = 14 + Math.random() * 6 + progress * 10;
+    const grad = ctx.createLinearGradient(rx, ry + 8, rx, ry + 8 + flameLen);
+    grad.addColorStop(0, 'rgba(255,210,60,0.95)');
+    grad.addColorStop(0.5, 'rgba(255,120,30,0.7)');
+    grad.addColorStop(1, 'rgba(255,60,0,0)');
+    ctx.beginPath();
+    ctx.moveTo(rx - 6, ry + 10);
+    ctx.lineTo(rx + 6, ry + 10);
+    ctx.lineTo(rx, ry + 10 + flameLen);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  /* rocket body */
+  ctx.save();
+  ctx.translate(rx, ry);
+  const angle = crashed ? 0.2 : (-Math.PI / 4 + progress * 0.12);
+  ctx.rotate(angle);
+
+  ctx.beginPath();
+  ctx.moveTo(0, -18);
+  ctx.quadraticCurveTo(9, -8, 9, 8);
+  ctx.lineTo(-9, 8);
+  ctx.quadraticCurveTo(-9, -8, 0, -18);
+  ctx.fillStyle = crashed ? '#7a1d1d' : '#e6e8eb';
+  ctx.fill();
+  ctx.strokeStyle = crashed ? '#f87171' : '#232833';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(0, -4, 4, 0, Math.PI * 2);
+  ctx.fillStyle = crashed ? '#4a1a1a' : '#4ade80';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(-9, 0); ctx.lineTo(-16, 10); ctx.lineTo(-9, 10); ctx.closePath();
+  ctx.fillStyle = crashed ? '#5a1a1a' : '#232833';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(9, 0); ctx.lineTo(16, 10); ctx.lineTo(9, 10); ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+
+  /* small crash puff */
+  if (crashed){
+    const t = performance.now() / 180;
+    const r = 12 + Math.sin(t) * 3;
+    ctx.beginPath();
+    ctx.arc(rx, ry, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(248,113,113,0.35)';
+    ctx.fill();
+  }
 }
 function renderMoonUI(){
   const multEl = $('#moonMult');
@@ -1482,6 +1752,12 @@ function renderMoonUI(){
     cashBtn.disabled = true;
     cashBtn.textContent = 'Cash Out';
   }
+
+  const progress = moon.phase === 'idle'
+    ? 0
+    : Math.min(1, Math.log(Math.max(1, moon.multiplier)) / Math.log(20));
+  const crashed = (moon.phase === 'done' && !moon.cashedOut);
+  moonDraw(progress, crashed);
 }
 function moonStart(){
   if (moon.phase === 'running') return;
@@ -1490,21 +1766,14 @@ function moonStart(){
   if (bet > meta.balance) return gameMsg('moon', 'Not enough credits.', 'lose');
 
   meta.balance -= bet;
-  persist();
-  renderBalance();
+  persist(); renderBalance();
 
-  /* 1% instant crash at 1.00, otherwise ~1% house edge */
   const u = Math.random();
   const crashPoint = (u < 0.01) ? 1.00 : Math.max(1.01, 0.99 / (1 - u));
 
   moon = {
-    phase: 'running',
-    bet,
-    multiplier: 1.00,
-    crashPoint,
-    startTime: performance.now(),
-    cashedOut: false,
-    cashoutMult: 0
+    phase: 'running', bet, multiplier: 1.00, crashPoint,
+    startTime: performance.now(), cashedOut: false, cashoutMult: 0
   };
   gameMsg('moon', '', '');
   renderMoonUI();
@@ -1514,17 +1783,16 @@ function moonTick(){
   if (moon.phase !== 'running') return;
   const elapsed = (performance.now() - moon.startTime) / 1000;
   const mult = Math.exp(0.12 * elapsed);
-
   if (mult >= moon.crashPoint){
     moon.multiplier = moon.crashPoint;
     moon.phase = 'done';
     renderMoonUI();
     if (!moon.cashedOut){
       gameMsg('moon', `Crashed at ${moon.crashPoint.toFixed(2)}× — you lose ${moon.bet} credits.`, 'lose');
+      notifyLoss();
     }
     return;
   }
-
   moon.multiplier = mult;
   renderMoonUI();
   requestAnimationFrame(moonTick);
@@ -1541,25 +1809,14 @@ function moonCashout(){
   const net = payout - moon.bet;
   gameMsg('moon',
     `Cashed out at ${mult.toFixed(2)}× — ${net >= 0 ? '+' : ''}${net} credits.`,
-    net >= 0 ? 'win' : 'lose');
+    net > 0 ? 'win' : (net < 0 ? 'lose' : ''));
+  if (net > 0) notifyWin(net);
   persist(); renderBalance();
 }
 
 /* ----- Plinko ----- */
-function plinkoDraw(ballX, ballY){
-  const canvas = $('#plinkoCanvas');
-  if (!canvas) return;
-  const DPR = window.devicePixelRatio || 1;
-  const W = 320, H = 350;
-  if (canvas.width !== W * DPR || canvas.height !== H * DPR){
-    canvas.width = W * DPR;
-    canvas.height = H * DPR;
-  }
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.clearRect(0, 0, W, H);
-
-  const cx = W/2;
+function drawPlinkoBoard(ctx, W){
+  const cx = W / 2;
   const y0 = 50, rowSp = 30, sp = 32;
 
   /* slots */
@@ -1596,36 +1853,77 @@ function plinkoDraw(ballX, ballY){
       ctx.fill();
     }
   }
-
-  /* ball */
-  if (ballX !== null && ballY !== null){
-    const grad = ctx.createRadialGradient(ballX - 2, ballY - 2, 1, ballX, ballY, 7);
-    grad.addColorStop(0, '#d6ffe5');
-    grad.addColorStop(1, '#4ade80');
-    ctx.beginPath();
-    ctx.arc(ballX, ballY, 7, 0, Math.PI * 2);
-    ctx.fillStyle = grad;
-    ctx.fill();
-    ctx.strokeStyle = '#06240f';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+}
+function drawPlinkoBall(ctx, x, y){
+  const grad = ctx.createRadialGradient(x - 2, y - 2, 1, x, y, 7);
+  grad.addColorStop(0, '#d6ffe5');
+  grad.addColorStop(1, '#4ade80');
+  ctx.beginPath();
+  ctx.arc(x, y, 7, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = '#06240f';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+function plinkoDrawMultiple(){
+  const canvas = $('#plinkoCanvas');
+  if (!canvas) return;
+  const DPR = window.devicePixelRatio || 1;
+  const W = 320, H = 350;
+  if (canvas.width !== W * DPR || canvas.height !== H * DPR){
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  drawPlinkoBoard(ctx, W);
+  const now = performance.now();
+  for (const b of plinkoBalls){
+    const pos = plinkoBallPos(b, now);
+    if (pos) drawPlinkoBall(ctx, pos.x, pos.y);
   }
 }
+function plinkoBallPos(b, now){
+  if (b.resolved){
+    if (now <= b.heldUntil){
+      const last = b.checkpoints[b.checkpoints.length - 1];
+      return { x: last.x, y: last.y };
+    }
+    return null;
+  }
+  const elapsed = now - b.startTime;
+  if (elapsed < 0){
+    return { x: b.checkpoints[0].x, y: -10 };
+  }
+  const seg = Math.floor(elapsed / b.segmentDuration);
+  if (seg >= b.checkpoints.length - 1){
+    const last = b.checkpoints[b.checkpoints.length - 1];
+    return { x: last.x, y: last.y };
+  }
+  const localT = (elapsed % b.segmentDuration) / b.segmentDuration;
+  const p1 = b.checkpoints[seg];
+  const p2 = b.checkpoints[seg + 1];
+  return {
+    x: p1.x + (p2.x - p1.x) * localT,
+    y: p1.y + (p2.y - p1.y) * (localT * localT)
+  };
+}
 function plinkoDrop(){
-  if (plinkoAnim) return;
+  if (plinkoBalls.length >= PLINKO_MAX_BALLS){
+    return gameMsg('plinko', 'Too many balls in flight — wait a moment.', 'lose');
+  }
   const bet = readBet();
   if (!bet) return gameMsg('plinko', 'Enter a valid bet first.', 'lose');
   if (bet > meta.balance) return gameMsg('plinko', 'Not enough credits.', 'lose');
 
-  /* binomial draw: count 8 coin flips (0-8 = slot index) */
   let slot = 0;
   for (let i = 0; i < PLINKO_ROWS; i++) if (Math.random() < 0.5) slot++;
 
   meta.balance -= bet;
-  persist();
-  renderBalance();
+  persist(); renderBalance();
 
-  /* build a bounce sequence with exactly `slot` right bounces */
   const dirs = [];
   for (let i = 0; i < PLINKO_ROWS; i++) dirs.push(i < slot ? 'R' : 'L');
   for (let i = dirs.length - 1; i > 0; i--){
@@ -1634,9 +1932,8 @@ function plinkoDrop(){
   }
 
   const cx = 160, y0 = 50, rowSp = 30, sp = 32;
-  const checkpoints = [{ x: cx, y: 0 }];
+  const checkpoints = [{ x: cx + (Math.random() - 0.5) * 10, y: 0 }, { x: cx, y: y0 }];
   let x = cx;
-  checkpoints.push({ x, y: y0 });
   for (let r = 0; r < PLINKO_ROWS - 1; r++){
     x += (dirs[r] === 'R' ? 1 : -1) * (sp / 2);
     checkpoints.push({ x, y: y0 + (r + 1) * rowSp });
@@ -1644,60 +1941,62 @@ function plinkoDrop(){
   x += (dirs[PLINKO_ROWS - 1] === 'R' ? 1 : -1) * (sp / 2);
   checkpoints.push({ x, y: 290 });
 
-  plinkoAnim = {
+  plinkoBalls.push({
     checkpoints,
-    startTime: performance.now(),
-    segmentDuration: 180,
+    startTime: performance.now() + 30 + Math.random() * 90,
+    segmentDuration: 170,
     slot,
-    bet
-  };
-  plinkoLastBall = null;
+    bet,
+    resolved: false,
+    heldUntil: 0
+  });
 
-  const dropBtn = $('#plinkoDropBtn');
-  if (dropBtn) dropBtn.disabled = true;
-  gameMsg('plinko', '', '');
-  requestAnimationFrame(plinkoTick);
+  if (!plinkoTickRunning){
+    plinkoTickRunning = true;
+    requestAnimationFrame(plinkoTick);
+  }
 }
 function plinkoTick(){
-  if (!plinkoAnim) return;
-  const elapsed = performance.now() - plinkoAnim.startTime;
-  const seg = Math.floor(elapsed / plinkoAnim.segmentDuration);
-  const localT = Math.min(1, (elapsed % plinkoAnim.segmentDuration) / plinkoAnim.segmentDuration);
+  const now = performance.now();
 
-  if (seg >= plinkoAnim.checkpoints.length - 1){
-    const last = plinkoAnim.checkpoints[plinkoAnim.checkpoints.length - 1];
-    plinkoLastBall = { x: last.x, y: last.y };
-    plinkoDraw(last.x, last.y);
-    plinkoFinish();
-    return;
+  plinkoBalls = plinkoBalls.filter(b => !(b.resolved && now > b.heldUntil));
+
+  for (const b of plinkoBalls){
+    if (b.resolved) continue;
+    const elapsed = now - b.startTime;
+    if (elapsed < 0) continue;
+    const seg = Math.floor(elapsed / b.segmentDuration);
+    if (seg >= b.checkpoints.length - 1){
+      b.resolved = true;
+      b.heldUntil = now + 450;
+      resolvePlinkoBall(b);
+    }
   }
 
-  const p1 = plinkoAnim.checkpoints[seg];
-  const p2 = plinkoAnim.checkpoints[seg + 1];
-  const bx = p1.x + (p2.x - p1.x) * localT;
-  const by = p1.y + (p2.y - p1.y) * (localT * localT);
-  plinkoDraw(bx, by);
-  requestAnimationFrame(plinkoTick);
-}
-function plinkoFinish(){
-  if (!plinkoAnim) return;
-  const slot = plinkoAnim.slot;
-  const bet = plinkoAnim.bet;
-  const mult = PLINKO_MULTS[slot];
-  const payout = Math.floor(bet * mult);
-  meta.balance += payout;
-  plinkoAnim = null;
+  plinkoDrawMultiple();
 
-  const dropBtn = $('#plinkoDropBtn');
-  if (dropBtn) dropBtn.disabled = false;
-
-  const net = payout - bet;
-  if (net >= 0){
-    gameMsg('plinko', `Landed ${mult}× — you win +${net} credits!`, 'win');
+  if (plinkoBalls.length > 0){
+    requestAnimationFrame(plinkoTick);
   } else {
-    gameMsg('plinko', `Landed ${mult}× — you lose ${-net} credits.`, 'lose');
+    plinkoTickRunning = false;
   }
-  persist(); renderBalance();
+}
+function resolvePlinkoBall(b){
+  const mult = PLINKO_MULTS[b.slot];
+  const payout = Math.floor(b.bet * mult);
+  meta.balance += payout;
+  const net = payout - b.bet;
+  if (net > 0){
+    gameMsg('plinko', `Landed ${mult}× — +${net} credits!`, 'win');
+    notifyWin(net);
+  } else if (net < 0){
+    gameMsg('plinko', `Landed ${mult}× — ${net} credits.`, 'lose');
+    notifyLoss();
+  } else {
+    gameMsg('plinko', `Landed ${mult}× — break-even.`, '');
+  }
+  persist();
+  renderBalance();
 }
 
 /* ---------- main casino render ---------- */
@@ -1707,11 +2006,7 @@ function renderCasino(){
   drawRoulette(rouletteRotation);
   renderSpinHistory();
   renderMoonUI();
-  if (plinkoLastBall){
-    plinkoDraw(plinkoLastBall.x, plinkoLastBall.y);
-  } else {
-    plinkoDraw(null, null);
-  }
+  plinkoDrawMultiple();
 }
 
 /* ---------- export / import ---------- */
@@ -1858,32 +2153,22 @@ document.addEventListener('click', e => {
   }
   else if (a === 'rm-set'){
     draft.exercises[+btn.dataset.ei].sets.splice(+btn.dataset.si, 1);
-    persist();
-    renderDraft();
+    persist(); renderDraft();
   }
   else if (a === 'rm-ex'){
     draft.exercises.splice(+btn.dataset.ei, 1);
-    persist();
-    renderDraft();
+    persist(); renderDraft();
   }
   else if (a === 'rm-custom'){
     const name = btn.dataset.name;
-    if (!confirm(`Remove “${name}” from your exercise list?\n\n` +
-                 `Past workouts keep their records.`)) return;
+    if (!confirm(`Remove “${name}” from your exercise list?\n\nPast workouts keep their records.`)) return;
     removeCustomExercise(name);
-    persist();
-    renderAll();
+    persist(); renderAll();
   }
   else if (a === 'finish'){
-    if (!draft.exercises.length){
-      alert('Nothing to save — add an exercise first.');
-      return;
-    }
+    if (!draft.exercises.length){ alert('Nothing to save — add an exercise first.'); return; }
     workouts.push({
-      id: uid(),
-      date: draft.date,
-      createdAt: Date.now(),
-      exercises: draft.exercises
+      id: uid(), date: draft.date, createdAt: Date.now(), exercises: draft.exercises
     });
     draft = { date: todayISO(), exercises: [] };
     $('#date').value = draft.date;
@@ -1901,18 +2186,15 @@ document.addEventListener('click', e => {
     if (!confirm('Discard this workout?')) return;
     draft = { date: todayISO(), exercises: [] };
     clearExerciseSelection();
-    persist();
-    renderAll();
+    persist(); renderAll();
   }
   else if (a === 'del-workout'){
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     if (!confirm('Delete this workout permanently?')) return;
     autoSnapshot('before delete');
     workouts = workouts.filter(w => w.id !== btn.dataset.id);
     meta.dirty = true;
-    persist();
-    renderAll();
+    persist(); renderAll();
   }
   /* ---- casino ---- */
   else if (a === 'tab'){
@@ -1937,20 +2219,20 @@ document.addEventListener('click', e => {
     creditNote = 'Balance reset.';
     persist(); renderCasino();
   }
-  else if (a === 'bj-deal')   { bjDeal(); }
-  else if (a === 'bj-hit')    { bjHit(); }
-  else if (a === 'bj-stand')  { bjStand(); }
-  else if (a === 'bj-double') { bjDouble(); }
-  else if (a === 'rl-spin')   { rouletteSpin(); }
-  else if (a === 'cf-heads')  { coinFlip('heads'); }
-  else if (a === 'cf-tails')  { coinFlip('tails'); }
-  else if (a === 'moon-start'){ moonStart(); }
+  else if (a === 'bj-deal')    { bjDeal(); }
+  else if (a === 'bj-hit')     { bjHit(); }
+  else if (a === 'bj-stand')   { bjStand(); }
+  else if (a === 'bj-double')  { bjDouble(); }
+  else if (a === 'rl-spin')    { rouletteSpin(); }
+  else if (a === 'cf-heads')   { coinFlip('heads'); }
+  else if (a === 'cf-tails')   { coinFlip('tails'); }
+  else if (a === 'moon-start') { moonStart(); }
   else if (a === 'moon-cashout'){ moonCashout(); }
   else if (a === 'plinko-drop'){ plinkoDrop(); }
-  else if (a === 'export')  { exportJSON(); }
-  else if (a === 'csv')     { exportCSV(); }
-  else if (a === 'import')  { $('#importFile').click(); }
-  else if (a === 'restore') { restoreSnapshot(btn.dataset.key); }
+  else if (a === 'export')     { exportJSON(); }
+  else if (a === 'csv')        { exportCSV(); }
+  else if (a === 'import')     { $('#importFile').click(); }
+  else if (a === 'restore')    { restoreSnapshot(btn.dataset.key); }
   else if (a === 'dismiss-install'){
     localStorage.setItem(KEY_HINT, '1');
     renderInstallHint();
@@ -2006,23 +2288,17 @@ window.addEventListener('pagehide', () => {
   const optS = $('#optAutoSnapshot');
   optD.checked = !!meta.autoDownload;
   optS.checked = !!meta.autoSnapshot;
-  optD.onchange = () => {
-    meta.autoDownload = optD.checked;
-    persist(); renderBackup();
-  };
-  optS.onchange = () => {
-    meta.autoSnapshot = optS.checked;
-    persist(); renderRecovery();
-  };
+  optD.onchange = () => { meta.autoDownload = optD.checked; persist(); renderBackup(); };
+  optS.onchange = () => { meta.autoSnapshot = optS.checked; persist(); renderRecovery(); };
+
   requestPersistence();
   if (meta.autoSnapshot && workouts.length
       && (!meta.lastSnapshotAt
           || Date.now() - meta.lastSnapshotAt > 6 * 3600 * 1000)){
     autoSnapshot('on open');
   }
+  moonInitStars();
   renderAll();
-  drawRoulette(0);
-  plinkoDraw(null, null);
 
   if ('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js').catch(() => {});
