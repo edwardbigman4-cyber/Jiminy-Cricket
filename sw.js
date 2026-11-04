@@ -1,4 +1,4 @@
-const CACHE = 'liftoff-v4';
+const CACHE = 'jiminy-cricket-v1';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
