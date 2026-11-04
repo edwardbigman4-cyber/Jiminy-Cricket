@@ -44,6 +44,8 @@
   button{padding:10px 14px; border-radius:8px; border:1px solid var(--line);
          background:#232833; color:var(--text); cursor:pointer}
   button:hover{background:#2b3240}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button:disabled:hover{background:#232833}
   button.primary{background:var(--accent); color:#06240f;
                  border-color:var(--accent); font-weight:600}
   button.primary:hover{filter:brightness(1.08)}
@@ -131,7 +133,8 @@
   .tabs{display:flex; gap:6px; margin-top:14px; border-bottom:1px solid var(--line)}
   .tab{flex:1; background:transparent; border:1px solid transparent;
        border-bottom:none; border-radius:8px 8px 0 0; color:var(--muted);
-       padding:8px 4px; font-size:13px}
+       padding:8px 2px; font-size:11px; white-space:nowrap; overflow:hidden;
+       text-overflow:ellipsis; font-weight:500}
   .tab.active{background:#0f1216; border-color:var(--line); color:var(--text);
               font-weight:600}
   .tabpane{padding-top:12px}
@@ -155,6 +158,20 @@
   .spin-dot.red{background:#c0392b}
   .spin-dot.black{background:#222}
   .spin-dot.green{background:#1e7a44}
+  #rouletteCanvas{display:block; margin:0 auto; width:100%; max-width:280px}
+  /* moon */
+  .moon-display{text-align:center; padding:22px 16px; background:#0f1216;
+                border-radius:10px; border:1px solid var(--line);
+                position:relative; overflow:hidden}
+  .moon-mult{font-size:44px; font-weight:800; line-height:1; color:var(--accent);
+             font-variant-numeric:tabular-nums; transition:color .2s}
+  .moon-bar{height:4px; background:#262a33; margin:16px auto 0; max-width:200px;
+            border-radius:2px; overflow:hidden}
+  .moon-bar-fill{height:100%; width:0%; background:var(--accent);
+                 transition:width .08s linear}
+  /* plinko */
+  #plinkoCanvas{display:block; margin:0 auto; width:100%; max-width:340px;
+                background:#0f1216; border-radius:10px}
 </style>
 </head>
 <body>
@@ -230,7 +247,9 @@
   <div class="tabs">
     <button class="tab active" data-action="tab" data-tab="bj">Blackjack</button>
     <button class="tab" data-action="tab" data-tab="rl">Roulette</button>
-    <button class="tab" data-action="tab" data-tab="cf">Coin flip</button>
+    <button class="tab" data-action="tab" data-tab="cf">Coin</button>
+    <button class="tab" data-action="tab" data-tab="moon">Moon</button>
+    <button class="tab" data-action="tab" data-tab="plinko">Plinko</button>
   </div>
 
   <div id="tab-bj" class="tabpane">
@@ -240,7 +259,8 @@
   </div>
 
   <div id="tab-rl" class="tabpane" hidden>
-    <select id="rouletteType">
+    <canvas id="rouletteCanvas"></canvas>
+    <select id="rouletteType" style="margin-top:10px">
       <option value="red">Red — pays 1:1</option>
       <option value="black">Black — pays 1:1</option>
       <option value="odd">Odd — pays 1:1</option>
@@ -251,7 +271,7 @@
     </select>
     <input type="number" id="rouletteNumber" min="0" max="36" step="1"
            placeholder="Number 0–36" hidden style="margin-top:8px" />
-    <button class="primary" data-action="rl-spin"
+    <button class="primary" id="rlSpinBtn" data-action="rl-spin"
             style="margin-top:10px; width:100%">Spin</button>
     <div class="result" id="res-rl"></div>
     <div class="spin-hist" id="rlHistory"></div>
@@ -263,6 +283,29 @@
       <button data-action="cf-tails">Tails</button>
     </div>
     <div class="result" id="res-cf"></div>
+  </div>
+
+  <div id="tab-moon" class="tabpane" hidden>
+    <div class="moon-display">
+      <div class="moon-mult" id="moonMult">1.00×</div>
+      <div class="moon-bar"><div class="moon-bar-fill" id="moonBar"></div></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="primary" data-action="moon-start" id="moonStartBtn">Launch 🚀</button>
+      <button data-action="moon-cashout" id="moonCashoutBtn" disabled>Cash Out</button>
+    </div>
+    <div class="result" id="res-moon"></div>
+    <p class="muted" style="margin-top:8px; text-align:center">
+      The multiplier climbs from 1.00×. Cash out before the rocket crashes to
+      win bet × multiplier. Crashes average around 2× — don't get greedy.
+    </p>
+  </div>
+
+  <div id="tab-plinko" class="tabpane" hidden>
+    <canvas id="plinkoCanvas"></canvas>
+    <button class="primary" data-action="plinko-drop" id="plinkoDropBtn"
+            style="margin-top:10px; width:100%">Drop Ball</button>
+    <div class="result" id="res-plinko"></div>
   </div>
 
   <p class="muted" style="margin:14px 0 0">
@@ -303,7 +346,7 @@
 <div class="card" id="recovery"></div>
 
 <p style="text-align:center;color:#8b93a1;font-size:11px;margin-top:30px">
-  v4 · built 2026-11-04
+  v5 · built 2026-11-04
 </p>
 
 <script>
@@ -311,7 +354,6 @@
    EXERCISE LIBRARY
    ============================================================ */
 const EXERCISE_LIBRARY = [
-  // CHEST
   {n:"Barbell Bench Press", c:"Chest"},
   {n:"Incline Barbell Bench Press", c:"Chest"},
   {n:"Decline Barbell Bench Press", c:"Chest"},
@@ -336,7 +378,6 @@ const EXERCISE_LIBRARY = [
   {n:"Landmine Chest Press", c:"Chest"},
   {n:"Dumbbell Pullover", c:"Chest"},
 
-  // BACK
   {n:"Deadlift", c:"Back"},
   {n:"Romanian Deadlift", c:"Back"},
   {n:"Stiff Leg Deadlift", c:"Back"},
@@ -362,7 +403,6 @@ const EXERCISE_LIBRARY = [
   {n:"Back Extension", c:"Back"},
   {n:"Reverse Hyperextension", c:"Back"},
 
-  // SHOULDERS
   {n:"Overhead Press", c:"Shoulders"},
   {n:"Barbell Shoulder Press", c:"Shoulders"},
   {n:"Dumbbell Shoulder Press", c:"Shoulders"},
@@ -380,7 +420,6 @@ const EXERCISE_LIBRARY = [
   {n:"Reverse Pec Deck", c:"Shoulders"},
   {n:"Upright Row", c:"Shoulders"},
 
-  // ARMS
   {n:"Barbell Curl", c:"Arms"},
   {n:"Dumbbell Curl", c:"Arms"},
   {n:"Hammer Curl", c:"Arms"},
@@ -401,7 +440,6 @@ const EXERCISE_LIBRARY = [
   {n:"Wrist Curl", c:"Arms"},
   {n:"Reverse Curl", c:"Arms"},
 
-  // LEGS
   {n:"Back Squat", c:"Legs"},
   {n:"Front Squat", c:"Legs"},
   {n:"Box Squat", c:"Legs"},
@@ -438,7 +476,6 @@ const EXERCISE_LIBRARY = [
   {n:"Sumo Deadlift", c:"Legs"},
   {n:"Pendulum Squat", c:"Legs"},
 
-  // CORE
   {n:"Plank", c:"Core"},
   {n:"Side Plank", c:"Core"},
   {n:"Crunch", c:"Core"},
@@ -468,7 +505,6 @@ const EXERCISE_LIBRARY = [
   {n:"Dead Bug", c:"Core"},
   {n:"Bird Dog", c:"Core"},
 
-  // CARDIO
   {n:"Treadmill Run", c:"Cardio"},
   {n:"Incline Walk", c:"Cardio"},
   {n:"Rowing Machine", c:"Cardio"},
@@ -486,9 +522,7 @@ const EXERCISE_LIBRARY = [
   {n:"Jumping Jack", c:"Cardio"},
 ];
 
-/* ---------- constants ----------
-   NOTE: storage keys keep their original "liftoff." prefix on purpose so
-   existing workout data survives the rename to Jiminy Cricket. */
+/* ---------- constants ---------- */
 const KEY_W = 'liftoff.workouts.v1';
 const KEY_D = 'liftoff.draft.v1';
 const KEY_M = 'liftoff.meta.v1';
@@ -500,16 +534,15 @@ const MAX_SNAPSHOTS = 8;
 const SNAPSHOT_MIN_GAP_MS = 60 * 1000;
 const MAX_PICKER_RESULTS = 60;
 
-/* casino tuning */
 const CREDIT_START = 1000;
 const WORKOUT_BONUS = 100;
 
-/* ---------- playing cards ----------
-   Defined here, BEFORE the blackjack state init below, because the state
-   initializer calls freshBJ() → newDeck() which reads SUITS/RANKS. */
+/* ---------- playing cards (defined before bj state init) ---------- */
 const SUITS = ['♠','♥','♦','♣'];
 const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const RED_NUMBERS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+const WHEEL_ORDER = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,
+                     24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
 
 function newDeck(){
   const d = [];
@@ -583,21 +616,41 @@ if (typeof meta.balance !== 'number' || !isFinite(meta.balance)){
   meta.balance = CREDIT_START;
 }
 
-/* custom exercises the user has created by logging an unknown name */
 let customExercises = loadJSON(KEY_CX, []);
 if (!Array.isArray(customExercises)) customExercises = [];
 customExercises = customExercises.filter(e => e && typeof e.n === 'string');
 
-/* blackjack table state (persisted so a reload can't dodge a live hand) */
 let bj = loadJSON(KEY_BJ, null);
 if (!bj || !Array.isArray(bj.deck) || !Array.isArray(bj.player)
     || !Array.isArray(bj.dealer)) {
   bj = freshBJ();
 }
 
-let creditNote = '';
+/* new-game state */
+let rouletteRotation = 0;
+let rouletteAnimating = false;
 let rouletteHistory = [];
 
+let moon = {
+  phase: 'idle',
+  bet: 0,
+  multiplier: 1.00,
+  crashPoint: 0,
+  startTime: 0,
+  cashedOut: false,
+  cashoutMult: 0
+};
+
+let plinkoAnim = null;
+let plinkoLastBall = null;
+
+const PLINKO_ROWS = 8;
+const PLINKO_SLOTS = 9;
+const PLINKO_MULTS = [5.6, 2.1, 1.1, 1.0, 0.5, 1.0, 1.1, 2.1, 5.6];
+const PLINKO_COLORS = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#3498db',
+                       '#2ecc71','#f1c40f','#e67e22','#e74c3c'];
+
+let creditNote = '';
 let pendingSets = [blankSet()];
 let exName = '';
 
@@ -616,7 +669,7 @@ async function requestPersistence(){
   } catch {}
 }
 
-/* ---------- custom exercise catalogue ---------- */
+/* ---------- custom exercises ---------- */
 function isInLibrary(name){
   const k = name.trim().toLowerCase();
   return EXERCISE_LIBRARY.some(e => e.n.toLowerCase() === k);
@@ -643,16 +696,13 @@ function removeCustomExercise(name){
   }
   return false;
 }
-function allExercises(){
-  return [...customExercises, ...EXERCISE_LIBRARY];
-}
+function allExercises(){ return [...customExercises, ...EXERCISE_LIBRARY]; }
 
-/* ---------- "last session" lookups ---------- */
+/* ---------- last-session lookups ---------- */
 function sortedWorkoutsDesc(){
   return [...workouts].sort((a, b) =>
     b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0));
 }
-
 function lastSessionFor(name){
   const key = name.toLowerCase().trim();
   for (const w of sortedWorkoutsDesc()){
@@ -664,7 +714,6 @@ function lastSessionFor(name){
   }
   return null;
 }
-
 function buildLastMap(){
   const map = {};
   for (const w of sortedWorkoutsDesc()){
@@ -676,7 +725,7 @@ function buildLastMap(){
   return map;
 }
 
-/* ---------- snapshot engine ---------- */
+/* ---------- snapshots ---------- */
 function listSnapshots(){
   const out = [];
   for (let i = 0; i < localStorage.length; i++){
@@ -685,36 +734,27 @@ function listSnapshots(){
     try {
       const d = JSON.parse(localStorage.getItem(k));
       out.push({ key: k, at: d.at, reason: d.reason,
-                 count: (d.workouts || []).length,
-                 workouts: d.workouts });
+                 count: (d.workouts || []).length, workouts: d.workouts });
     } catch {}
   }
   return out.sort((a, b) => b.at - a.at);
 }
-
 function pruneSnapshots(){
-  listSnapshots().slice(MAX_SNAPSHOTS)
-    .forEach(s => localStorage.removeItem(s.key));
+  listSnapshots().slice(MAX_SNAPSHOTS).forEach(s => localStorage.removeItem(s.key));
 }
-
 function autoSnapshot(reason){
   if (!meta.autoSnapshot) return;
   const sig = JSON.stringify(workouts);
   const latest = listSnapshots()[0];
   if (latest && Date.now() - latest.at < SNAPSHOT_MIN_GAP_MS
-      && JSON.stringify(latest.workouts) === sig){
-    return;
-  }
+      && JSON.stringify(latest.workouts) === sig) return;
   const key = SNAP_PREFIX + Date.now() + '.' + uid();
-  localStorage.setItem(key, JSON.stringify({
-    at: Date.now(), reason, workouts
-  }));
+  localStorage.setItem(key, JSON.stringify({ at: Date.now(), reason, workouts }));
   meta.lastSnapshotAt = Date.now();
   localStorage.setItem(KEY_M, JSON.stringify(meta));
   pruneSnapshots();
   renderRecovery();
 }
-
 function restoreSnapshot(key){
   const snap = listSnapshots().find(s => s.key === key);
   if (!snap) return;
@@ -736,7 +776,6 @@ function restoreSnapshot(key){
 const volumeOf = w => Math.round(
   w.exercises.reduce((t, e) =>
     t + e.sets.reduce((s, x) => s + x.weight * x.reps, 0), 0));
-
 const bestSet = sets => sets.reduce((b, s) =>
   (s.weight > b.weight || (s.weight === b.weight && s.reps > b.reps)) ? s : b,
   sets[0]);
@@ -750,19 +789,12 @@ function filterLibrary(query){
     .filter(e => e.n.toLowerCase().includes(q) || e.c.toLowerCase().includes(q))
     .slice(0, MAX_PICKER_RESULTS);
 }
-
 function renderPicker(){
   const box = $('#pickerResults');
   const query = $('#exSearch').value;
-
-  if (!query.trim()){
-    box.hidden = true;
-    return;
-  }
-
+  if (!query.trim()){ box.hidden = true; return; }
   const lastMap = buildLastMap();
   const matches = filterLibrary(query);
-
   let html = matches.map(e => {
     const last = lastMap[e.n.toLowerCase().trim()];
     let lastHtml = '';
@@ -779,7 +811,6 @@ function renderPicker(){
       <div class="pick-cat">${esc(e.c)}</div>
     </div>`;
   }).join('');
-
   const exact = matches.some(e => e.n.toLowerCase() === query.trim().toLowerCase());
   if (!exact){
     const trimmed = query.trim();
@@ -797,13 +828,10 @@ function renderPicker(){
       <div class="pick-cat">New</div>
     </div>`;
   }
-
   if (!html) html = '<p class="empty" style="padding:12px">No matches.</p>';
-
   box.innerHTML = html;
   box.hidden = false;
 }
-
 function renderLastSession(){
   const el = $('#lastSession');
   if (!exName){ el.innerHTML = ''; return; }
@@ -822,27 +850,20 @@ function renderLastSession(){
     <div class="best">Best: ${b.weight}kg × ${b.reps} reps · ${last.sets.length} set${last.sets.length === 1 ? '' : 's'} · pre-filled below</div>
   </div>`;
 }
-
 function selectExercise(name){
   exName = name;
   $('#exSearch').value = name;
   $('#selectedExercise').textContent = 'Selected: ' + name;
   $('#pickerResults').hidden = true;
-
   const last = lastSessionFor(name);
   if (last && last.sets.length){
-    pendingSets = last.sets.map(s => ({
-      weight: String(s.weight),
-      reps:   String(s.reps)
-    }));
+    pendingSets = last.sets.map(s => ({ weight: String(s.weight), reps: String(s.reps) }));
   } else {
     pendingSets = [blankSet()];
   }
-
   renderPendingSets();
   renderLastSession();
 }
-
 function clearExerciseSelection(){
   exName = '';
   $('#exSearch').value = '';
@@ -871,7 +892,6 @@ function renderPendingSets(){
     wrap.appendChild(row);
   });
 }
-
 function renderDraft(){
   const list = $('#draftList');
   if (!draft.exercises.length){
@@ -894,7 +914,6 @@ function renderDraft(){
     </div>`;
   }).join('');
 }
-
 function renderHistory(){
   const h = $('#history');
   if (!workouts.length){
@@ -927,7 +946,6 @@ function renderHistory(){
       </details>`;
     }).join('');
 }
-
 function renderStats(){
   const el = $('#stats');
   if (!workouts.length){ el.innerHTML = ''; return; }
@@ -946,14 +964,12 @@ function renderStats(){
     <div class="stat"><div class="stat-num">${Math.round(totalVol).toLocaleString()}</div><div class="stat-lbl">kg volume</div></div>
     <div class="stat"><div class="stat-num">${totalSets}</div><div class="stat-lbl">Sets</div></div>`;
 }
-
 function allExerciseNames(){
   const s = new Set();
   workouts.forEach(w => w.exercises.forEach(e => s.add(e.name)));
   customExercises.forEach(e => s.add(e.n));
   return [...s].sort((a, b) => a.localeCompare(b));
 }
-
 function renderExercisePicker(){
   const sel = $('#exFilter');
   const names = allExerciseNames();
@@ -962,7 +978,6 @@ function renderExercisePicker(){
     names.map(n => `<option>${esc(n)}</option>`).join('');
   if (names.includes(cur)) sel.value = cur;
 }
-
 function renderExerciseHistory(){
   const name = $('#exFilter').value;
   const el = $('#exHistory');
@@ -994,7 +1009,6 @@ function renderExerciseHistory(){
     </div>`;
   }).join('');
 }
-
 function renderCustomExercises(){
   const el = $('#customExList');
   if (!customExercises.length){
@@ -1008,7 +1022,6 @@ function renderCustomExercises(){
       <button class="x" data-action="rm-custom" data-name="${esc(e.n)}">✕</button>
     </div>`).join('');
 }
-
 function renderBackup(){
   const el = $('#backupStatus');
   if (!workouts.length){ el.hidden = true; return; }
@@ -1033,14 +1046,10 @@ function renderBackup(){
     el.textContent = label;
   }
 }
-
 function renderRecovery(){
   const el = $('#recovery');
   const snaps = listSnapshots();
-  if (!snaps.length){
-    el.innerHTML = '<p class="empty">No snapshots yet.</p>';
-    return;
-  }
+  if (!snaps.length){ el.innerHTML = '<p class="empty">No snapshots yet.</p>'; return; }
   el.innerHTML = snaps.map(s => `
     <div class="snaprow">
       <div class="meta">
@@ -1050,7 +1059,6 @@ function renderRecovery(){
       <button data-action="restore" data-key="${s.key}">Restore</button>
     </div>`).join('');
 }
-
 function renderRestoreBanner(){
   const el = $('#restoreBanner');
   const snaps = listSnapshots();
@@ -1065,7 +1073,6 @@ function renderRestoreBanner(){
     el.hidden = true;
   }
 }
-
 function renderInstallHint(){
   const el = $('#installHint');
   const dismissed = localStorage.getItem(KEY_HINT) === '1';
@@ -1073,7 +1080,6 @@ function renderInstallHint(){
                     || navigator.standalone === true;
   el.hidden = dismissed || standalone;
 }
-
 async function renderStorage(){
   try {
     const { usage, quota } = await navigator.storage.estimate();
@@ -1137,17 +1143,11 @@ function renderBalance(){
   $('#creditNote').textContent = creditNote
     || 'Bet credits on games of chance. No real money involved.';
 }
-function renderCasino(){
-  renderBalance();
-  renderBlackjack();
-  renderSpinHistory();
-}
 
 /* ----- blackjack ----- */
 function renderBlackjack(){
   const table = $('#bjTable'), ctrl = $('#bjControls'), res = $('#res-bj');
   if (!table) return;
-
   if (!bj.player.length){
     table.innerHTML = '<p class="muted" style="margin:0">Place a bet and press ' +
       'Deal. Blackjack pays 3:2 · dealer stands on 17 · double allowed on any ' +
@@ -1164,34 +1164,27 @@ function renderBlackjack(){
         <span class="hand-tot">${handValue(bj.player)}</span></div>
       <div class="muted" style="margin-top:6px">Bet: ${bj.bet} credits</div>`;
   }
-
   ctrl.innerHTML = bj.phase === 'player'
     ? `<button class="primary" data-action="bj-hit">Hit</button>
        <button data-action="bj-stand">Stand</button>
        ${bj.player.length === 2 && meta.balance >= bj.bet
          ? '<button data-action="bj-double">Double</button>' : ''}`
     : `<button class="primary" data-action="bj-deal">Deal</button>`;
-
   res.textContent = bj.result || '';
   res.className = 'result ' + (bj.kind || '');
 }
-
 function bjDeal(){
   if (bj.phase === 'player') return;
   const bet = readBet();
   if (!bet) return gameMsg('bj', 'Enter a valid bet first.', 'lose');
   if (bet > meta.balance) return gameMsg('bj', 'Not enough credits.', 'lose');
-
   const deck = (bj.deck && bj.deck.length >= 20) ? bj.deck : newDeck();
   bj = { deck, player: [], dealer: [], bet, phase: 'player', result: '', kind: '' };
   meta.balance -= bet;
-
   bj.player.push(bj.deck.pop(), bj.deck.pop());
   bj.dealer.push(bj.deck.pop(), bj.deck.pop());
-
   const pBJ = bj.player.length === 2 && handValue(bj.player) === 21;
   const dBJ = bj.dealer.length === 2 && handValue(bj.dealer) === 21;
-
   if (pBJ || dBJ){
     bj.phase = 'done';
     if (pBJ && dBJ){
@@ -1208,10 +1201,8 @@ function bjDeal(){
       bj.kind = 'lose';
     }
   }
-
   saveBJ(); persist(); renderCasino();
 }
-
 function bjHit(){
   if (bj.phase !== 'player') return;
   bj.player.push(bj.deck.pop());
@@ -1220,18 +1211,13 @@ function bjHit(){
     bj.phase = 'done';
     bj.result = 'Bust — you lose.';
     bj.kind = 'lose';
-  } else if (v === 21){
-    bjStand();
-    return;
-  }
+  } else if (v === 21){ bjStand(); return; }
   saveBJ(); renderCasino();
 }
-
 function bjStand(){
   if (bj.phase !== 'player') return;
   bj.phase = 'done';
   while (handValue(bj.dealer) < 17) bj.dealer.push(bj.deck.pop());
-
   const p = handValue(bj.player), d = handValue(bj.dealer);
   if (d > 21){
     meta.balance += bj.bet * 2;
@@ -1251,7 +1237,6 @@ function bjStand(){
   }
   saveBJ(); persist(); renderCasino();
 }
-
 function bjDouble(){
   if (bj.phase !== 'player' || bj.player.length !== 2) return;
   if (meta.balance < bj.bet) return gameMsg('bj', 'Not enough credits to double.', 'lose');
@@ -1273,7 +1258,92 @@ function rouletteColor(n){
   if (n === 0) return 'green';
   return RED_NUMBERS.has(n) ? 'red' : 'black';
 }
+function drawRoulette(rotation){
+  const canvas = $('#rouletteCanvas');
+  if (!canvas) return;
+  const DPR = window.devicePixelRatio || 1;
+  const W = 280, H = 280;
+  if (canvas.width !== W * DPR || canvas.height !== H * DPR){
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
 
+  const cx = W/2, cy = H/2, radius = 115;
+  const arc = 2 * Math.PI / 37;
+
+  /* outer ring */
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius + 8, 0, Math.PI * 2);
+  ctx.fillStyle = '#181b21';
+  ctx.fill();
+  ctx.strokeStyle = '#2b3240';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  /* pockets */
+  for (let i = 0; i < 37; i++){
+    const num = WHEEL_ORDER[i];
+    const centerAngle = -Math.PI/2 + i * arc + rotation;
+    const startAngle = centerAngle - arc/2;
+    const endAngle = centerAngle + arc/2;
+
+    let color;
+    if (num === 0) color = '#1e7a44';
+    else if (RED_NUMBERS.has(num)) color = '#c0392b';
+    else color = '#222';
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(15,17,21,0.55)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  /* numbers */
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 11px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < 37; i++){
+    const num = WHEEL_ORDER[i];
+    const centerAngle = -Math.PI/2 + i * arc + rotation;
+    const tx = cx + Math.cos(centerAngle) * (radius - 20);
+    const ty = cy + Math.sin(centerAngle) * (radius - 20);
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.rotate(centerAngle + Math.PI/2);
+    ctx.fillText(String(num), 0, 0);
+    ctx.restore();
+  }
+
+  /* hub */
+  ctx.beginPath();
+  ctx.arc(cx, cy, 32, 0, Math.PI * 2);
+  ctx.fillStyle = '#181b21';
+  ctx.fill();
+  ctx.strokeStyle = '#2b3240';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  /* pointer */
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - radius + 4);
+  ctx.lineTo(cx - 9, cy - radius - 18);
+  ctx.lineTo(cx + 9, cy - radius - 18);
+  ctx.closePath();
+  ctx.fillStyle = '#4ade80';
+  ctx.fill();
+  ctx.strokeStyle = '#06240f';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
 function renderSpinHistory(){
   const el = $('#rlHistory');
   if (!el) return;
@@ -1282,8 +1352,8 @@ function renderSpinHistory(){
     return `<span class="spin-dot ${c}" title="${c}">${n}</span>`;
   }).join('');
 }
-
 function rouletteSpin(){
+  if (rouletteAnimating) return;
   const bet = readBet();
   if (!bet) return gameMsg('rl', 'Enter a valid bet first.', 'lose');
   if (bet > meta.balance) return gameMsg('rl', 'Not enough credits.', 'lose');
@@ -1298,10 +1368,39 @@ function rouletteSpin(){
   }
 
   meta.balance -= bet;
+  persist();
+  renderBalance();
+
   const n = Math.floor(Math.random() * 37);
+  const winningIndex = WHEEL_ORDER.indexOf(n);
+  const arc = 2 * Math.PI / 37;
+  const offset = (Math.random() - 0.5) * arc * 0.6;
+  const finalRotation = -winningIndex * arc + offset + 2 * Math.PI * 6;
+
+  rouletteAnimating = true;
+  const spinBtn = $('#rlSpinBtn');
+  if (spinBtn) spinBtn.disabled = true;
+  const startTime = performance.now();
+  const duration = 4200;
+
+  function step(){
+    const t = Math.min(1, (performance.now() - startTime) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    rouletteRotation = finalRotation * eased;
+    drawRoulette(rouletteRotation);
+    if (t < 1){
+      requestAnimationFrame(step);
+    } else {
+      rouletteAnimating = false;
+      if (spinBtn) spinBtn.disabled = false;
+      finishRouletteSpin(n, type, picked, bet);
+    }
+  }
+  requestAnimationFrame(step);
+}
+function finishRouletteSpin(n, type, picked, bet){
   const color = rouletteColor(n);
   let win = 0;
-
   switch (type){
     case 'red':   if (color === 'red')   win = bet * 2; break;
     case 'black': if (color === 'black') win = bet * 2; break;
@@ -1311,17 +1410,14 @@ function rouletteSpin(){
     case 'high':  if (n >= 19 && n <= 36) win = bet * 2; break;
     case 'number': if (n === picked) win = bet * 36; break;
   }
-
   meta.balance += win;
   rouletteHistory = [n, ...rouletteHistory].slice(0, 12);
-
   const label = `Ball lands on ${n} (${color}).`;
   if (win > 0){
     gameMsg('rl', `${label} You win +${win - bet} credits.`, 'win');
   } else {
     gameMsg('rl', `${label} You lose ${bet} credits.`, 'lose');
   }
-
   persist(); renderCasino();
 }
 
@@ -1330,7 +1426,6 @@ function coinFlip(side){
   const bet = readBet();
   if (!bet) return gameMsg('cf', 'Enter a valid bet first.', 'lose');
   if (bet > meta.balance) return gameMsg('cf', 'Not enough credits.', 'lose');
-
   meta.balance -= bet;
   const result = Math.random() < 0.5 ? 'heads' : 'tails';
   if (result === side){
@@ -1340,6 +1435,283 @@ function coinFlip(side){
     gameMsg('cf', `It's ${result} — you lose ${bet} credits.`, 'lose');
   }
   persist(); renderCasino();
+}
+
+/* ----- To the Moon (crash) ----- */
+function moonColor(mult){
+  if (mult < 2) return 'var(--accent)';
+  if (mult < 5) return '#f1c40f';
+  if (mult < 10) return '#e67e22';
+  return '#e74c3c';
+}
+function renderMoonUI(){
+  const multEl = $('#moonMult');
+  const barEl = $('#moonBar');
+  const startBtn = $('#moonStartBtn');
+  const cashBtn = $('#moonCashoutBtn');
+  if (!multEl) return;
+
+  if (moon.phase === 'running'){
+    multEl.textContent = moon.multiplier.toFixed(2) + '×';
+    multEl.style.color = moonColor(moon.multiplier);
+    const pct = Math.min(100, Math.log(Math.max(1, moon.multiplier)) / Math.log(20) * 100);
+    barEl.style.width = pct + '%';
+    barEl.style.background = moonColor(moon.multiplier);
+    startBtn.disabled = true;
+    cashBtn.disabled = false;
+    cashBtn.textContent = `Cash Out (${Math.floor(moon.bet * moon.multiplier)})`;
+  } else if (moon.phase === 'done'){
+    if (moon.cashedOut){
+      multEl.textContent = moon.cashoutMult.toFixed(2) + '×';
+      multEl.style.color = 'var(--ok-fg)';
+    } else {
+      multEl.textContent = moon.crashPoint.toFixed(2) + '×';
+      multEl.style.color = 'var(--danger)';
+    }
+    barEl.style.width = '100%';
+    barEl.style.background = moon.cashedOut ? 'var(--ok-fg)' : 'var(--danger)';
+    startBtn.disabled = false;
+    cashBtn.disabled = true;
+    cashBtn.textContent = 'Cash Out';
+  } else {
+    multEl.textContent = '1.00×';
+    multEl.style.color = 'var(--accent)';
+    barEl.style.width = '0%';
+    barEl.style.background = 'var(--accent)';
+    startBtn.disabled = false;
+    cashBtn.disabled = true;
+    cashBtn.textContent = 'Cash Out';
+  }
+}
+function moonStart(){
+  if (moon.phase === 'running') return;
+  const bet = readBet();
+  if (!bet) return gameMsg('moon', 'Enter a valid bet first.', 'lose');
+  if (bet > meta.balance) return gameMsg('moon', 'Not enough credits.', 'lose');
+
+  meta.balance -= bet;
+  persist();
+  renderBalance();
+
+  /* 1% instant crash at 1.00, otherwise ~1% house edge */
+  const u = Math.random();
+  const crashPoint = (u < 0.01) ? 1.00 : Math.max(1.01, 0.99 / (1 - u));
+
+  moon = {
+    phase: 'running',
+    bet,
+    multiplier: 1.00,
+    crashPoint,
+    startTime: performance.now(),
+    cashedOut: false,
+    cashoutMult: 0
+  };
+  gameMsg('moon', '', '');
+  renderMoonUI();
+  requestAnimationFrame(moonTick);
+}
+function moonTick(){
+  if (moon.phase !== 'running') return;
+  const elapsed = (performance.now() - moon.startTime) / 1000;
+  const mult = Math.exp(0.12 * elapsed);
+
+  if (mult >= moon.crashPoint){
+    moon.multiplier = moon.crashPoint;
+    moon.phase = 'done';
+    renderMoonUI();
+    if (!moon.cashedOut){
+      gameMsg('moon', `Crashed at ${moon.crashPoint.toFixed(2)}× — you lose ${moon.bet} credits.`, 'lose');
+    }
+    return;
+  }
+
+  moon.multiplier = mult;
+  renderMoonUI();
+  requestAnimationFrame(moonTick);
+}
+function moonCashout(){
+  if (moon.phase !== 'running') return;
+  const mult = Math.max(1.00, moon.multiplier);
+  const payout = Math.floor(moon.bet * mult);
+  meta.balance += payout;
+  moon.cashedOut = true;
+  moon.cashoutMult = mult;
+  moon.phase = 'done';
+  renderMoonUI();
+  const net = payout - moon.bet;
+  gameMsg('moon',
+    `Cashed out at ${mult.toFixed(2)}× — ${net >= 0 ? '+' : ''}${net} credits.`,
+    net >= 0 ? 'win' : 'lose');
+  persist(); renderBalance();
+}
+
+/* ----- Plinko ----- */
+function plinkoDraw(ballX, ballY){
+  const canvas = $('#plinkoCanvas');
+  if (!canvas) return;
+  const DPR = window.devicePixelRatio || 1;
+  const W = 320, H = 350;
+  if (canvas.width !== W * DPR || canvas.height !== H * DPR){
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const cx = W/2;
+  const y0 = 50, rowSp = 30, sp = 32;
+
+  /* slots */
+  for (let j = 0; j < PLINKO_SLOTS; j++){
+    const x = cx + (j - 4) * sp;
+    const y = 270, w = 30, h = 65, r = 6;
+    ctx.fillStyle = PLINKO_COLORS[j];
+    ctx.beginPath();
+    ctx.moveTo(x - w/2 + r, y);
+    ctx.lineTo(x + w/2 - r, y);
+    ctx.quadraticCurveTo(x + w/2, y, x + w/2, y + r);
+    ctx.lineTo(x + w/2, y + h);
+    ctx.lineTo(x - w/2, y + h);
+    ctx.lineTo(x - w/2, y + r);
+    ctx.quadraticCurveTo(x - w/2, y, x - w/2 + r, y);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(PLINKO_MULTS[j] + 'x', x, y + 42);
+  }
+
+  /* pegs */
+  ctx.fillStyle = '#e6e8eb';
+  for (let r = 0; r < PLINKO_ROWS; r++){
+    for (let i = 0; i <= r; i++){
+      const x = cx + (i - r/2) * sp;
+      const y = y0 + r * rowSp;
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /* ball */
+  if (ballX !== null && ballY !== null){
+    const grad = ctx.createRadialGradient(ballX - 2, ballY - 2, 1, ballX, ballY, 7);
+    grad.addColorStop(0, '#d6ffe5');
+    grad.addColorStop(1, '#4ade80');
+    ctx.beginPath();
+    ctx.arc(ballX, ballY, 7, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = '#06240f';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+}
+function plinkoDrop(){
+  if (plinkoAnim) return;
+  const bet = readBet();
+  if (!bet) return gameMsg('plinko', 'Enter a valid bet first.', 'lose');
+  if (bet > meta.balance) return gameMsg('plinko', 'Not enough credits.', 'lose');
+
+  /* binomial draw: count 8 coin flips (0-8 = slot index) */
+  let slot = 0;
+  for (let i = 0; i < PLINKO_ROWS; i++) if (Math.random() < 0.5) slot++;
+
+  meta.balance -= bet;
+  persist();
+  renderBalance();
+
+  /* build a bounce sequence with exactly `slot` right bounces */
+  const dirs = [];
+  for (let i = 0; i < PLINKO_ROWS; i++) dirs.push(i < slot ? 'R' : 'L');
+  for (let i = dirs.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+  }
+
+  const cx = 160, y0 = 50, rowSp = 30, sp = 32;
+  const checkpoints = [{ x: cx, y: 0 }];
+  let x = cx;
+  checkpoints.push({ x, y: y0 });
+  for (let r = 0; r < PLINKO_ROWS - 1; r++){
+    x += (dirs[r] === 'R' ? 1 : -1) * (sp / 2);
+    checkpoints.push({ x, y: y0 + (r + 1) * rowSp });
+  }
+  x += (dirs[PLINKO_ROWS - 1] === 'R' ? 1 : -1) * (sp / 2);
+  checkpoints.push({ x, y: 290 });
+
+  plinkoAnim = {
+    checkpoints,
+    startTime: performance.now(),
+    segmentDuration: 180,
+    slot,
+    bet
+  };
+  plinkoLastBall = null;
+
+  const dropBtn = $('#plinkoDropBtn');
+  if (dropBtn) dropBtn.disabled = true;
+  gameMsg('plinko', '', '');
+  requestAnimationFrame(plinkoTick);
+}
+function plinkoTick(){
+  if (!plinkoAnim) return;
+  const elapsed = performance.now() - plinkoAnim.startTime;
+  const seg = Math.floor(elapsed / plinkoAnim.segmentDuration);
+  const localT = Math.min(1, (elapsed % plinkoAnim.segmentDuration) / plinkoAnim.segmentDuration);
+
+  if (seg >= plinkoAnim.checkpoints.length - 1){
+    const last = plinkoAnim.checkpoints[plinkoAnim.checkpoints.length - 1];
+    plinkoLastBall = { x: last.x, y: last.y };
+    plinkoDraw(last.x, last.y);
+    plinkoFinish();
+    return;
+  }
+
+  const p1 = plinkoAnim.checkpoints[seg];
+  const p2 = plinkoAnim.checkpoints[seg + 1];
+  const bx = p1.x + (p2.x - p1.x) * localT;
+  const by = p1.y + (p2.y - p1.y) * (localT * localT);
+  plinkoDraw(bx, by);
+  requestAnimationFrame(plinkoTick);
+}
+function plinkoFinish(){
+  if (!plinkoAnim) return;
+  const slot = plinkoAnim.slot;
+  const bet = plinkoAnim.bet;
+  const mult = PLINKO_MULTS[slot];
+  const payout = Math.floor(bet * mult);
+  meta.balance += payout;
+  plinkoAnim = null;
+
+  const dropBtn = $('#plinkoDropBtn');
+  if (dropBtn) dropBtn.disabled = false;
+
+  const net = payout - bet;
+  if (net >= 0){
+    gameMsg('plinko', `Landed ${mult}× — you win +${net} credits!`, 'win');
+  } else {
+    gameMsg('plinko', `Landed ${mult}× — you lose ${-net} credits.`, 'lose');
+  }
+  persist(); renderBalance();
+}
+
+/* ---------- main casino render ---------- */
+function renderCasino(){
+  renderBalance();
+  renderBlackjack();
+  drawRoulette(rouletteRotation);
+  renderSpinHistory();
+  renderMoonUI();
+  if (plinkoLastBall){
+    plinkoDraw(plinkoLastBall.x, plinkoLastBall.y);
+  } else {
+    plinkoDraw(null, null);
+  }
 }
 
 /* ---------- export / import ---------- */
@@ -1354,15 +1726,13 @@ function download(filename, text, type){
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-
 function backupFilename(){
   const d = new Date();
   const p = n => String(n).padStart(2, '0');
   return `jiminy-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}` +
          `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.json`;
 }
-
-function exportJSON(silent){
+function exportJSON(){
   const data = JSON.stringify({
     app: 'jiminy-cricket',
     version: 2,
@@ -1375,17 +1745,14 @@ function exportJSON(silent){
   persist();
   renderBackup();
 }
-
 function autoBackupAfterWorkout(){
   if (!meta.autoDownload) return;
-  exportJSON(true);
+  exportJSON();
 }
-
 function csvCell(v){
   const s = String(v);
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
-
 function exportCSV(){
   const rows = [['date', 'exercise', 'set', 'weight_kg', 'reps']];
   [...workouts].sort((a, b) => a.date.localeCompare(b.date)).forEach(w => {
@@ -1399,7 +1766,6 @@ function exportCSV(){
            rows.map(r => r.map(csvCell).join(',')).join('\n'),
            'text/csv');
 }
-
 function validateWorkout(w){
   if (!w || typeof w !== 'object') return null;
   if (typeof w.date !== 'string') return null;
@@ -1421,7 +1787,6 @@ function validateWorkout(w){
     exercises
   };
 }
-
 function importJSON(file){
   const reader = new FileReader();
   reader.onload = () => {
@@ -1437,15 +1802,12 @@ function importJSON(file){
       for (const w of clean){
         if (!existing.has(w.id)){ workouts.push(w); existing.add(w.id); added++; }
       }
-      // pull in any custom exercise names from the backup
       if (Array.isArray(raw.customExercises)){
         raw.customExercises.forEach(e => {
           if (e && typeof e.n === 'string') addCustomExercise(e.n);
         });
       }
-      // and anything referenced by the imported workouts
       clean.forEach(w => w.exercises.forEach(e => addCustomExercise(e.name)));
-
       meta.lastBackupAt = Date.now();
       meta.dirty = true;
       persist();
@@ -1465,21 +1827,16 @@ document.addEventListener('click', e => {
   if (!btn) return;
   const a = btn.dataset.action;
 
-  if (a === 'pick-exercise'){
-    selectExercise(btn.dataset.name);
-  }
-
+  if (a === 'pick-exercise'){ selectExercise(btn.dataset.name); }
   else if (a === 'add-set'){
     pendingSets.push(blankSet());
     renderPendingSets();
   }
-
   else if (a === 'remove-set'){
     pendingSets.splice(+btn.dataset.i, 1);
     if (!pendingSets.length) pendingSets.push(blankSet());
     renderPendingSets();
   }
-
   else if (a === 'add-exercise'){
     const name = exName.trim();
     if (!name){ alert('Search and pick an exercise first.'); return; }
@@ -1488,10 +1845,7 @@ document.addEventListener('click', e => {
       reps:   parseInt(s.reps, 10) || 0
     })).filter(s => s.reps > 0);
     if (!sets.length){ alert('Add at least one set with reps > 0.'); return; }
-
-    // NEW: remember any exercise that isn't already in the catalogue
     const wasNew = addCustomExercise(name);
-
     draft.exercises.push({ id: uid(), name, sets });
     clearExerciseSelection();
     persist();
@@ -1502,19 +1856,16 @@ document.addEventListener('click', e => {
     }
     $('#exSearch').focus();
   }
-
   else if (a === 'rm-set'){
     draft.exercises[+btn.dataset.ei].sets.splice(+btn.dataset.si, 1);
     persist();
     renderDraft();
   }
-
   else if (a === 'rm-ex'){
     draft.exercises.splice(+btn.dataset.ei, 1);
     persist();
     renderDraft();
   }
-
   else if (a === 'rm-custom'){
     const name = btn.dataset.name;
     if (!confirm(`Remove “${name}” from your exercise list?\n\n` +
@@ -1523,7 +1874,6 @@ document.addEventListener('click', e => {
     persist();
     renderAll();
   }
-
   else if (a === 'finish'){
     if (!draft.exercises.length){
       alert('Nothing to save — add an exercise first.');
@@ -1546,7 +1896,6 @@ document.addEventListener('click', e => {
     clearExerciseSelection();
     renderAll();
   }
-
   else if (a === 'discard'){
     if (!draft.exercises.length) return;
     if (!confirm('Discard this workout?')) return;
@@ -1555,7 +1904,6 @@ document.addEventListener('click', e => {
     persist();
     renderAll();
   }
-
   else if (a === 'del-workout'){
     e.preventDefault();
     e.stopPropagation();
@@ -1566,35 +1914,29 @@ document.addEventListener('click', e => {
     persist();
     renderAll();
   }
-
   /* ---- casino ---- */
   else if (a === 'tab'){
     document.querySelectorAll('.tab').forEach(t =>
       t.classList.toggle('active', t.dataset.tab === btn.dataset.tab));
-    ['bj','rl','cf'].forEach(k =>
+    ['bj','rl','cf','moon','plinko'].forEach(k =>
       $('#tab-' + k).hidden = (k !== btn.dataset.tab));
+    renderCasino();
   }
-
   else if (a === 'set-bet'){
     const v = btn.dataset.v;
-    $('#betAmount').value = v === 'max'
-      ? Math.max(1, Math.floor(meta.balance))
-      : v;
+    $('#betAmount').value = v === 'max' ? Math.max(1, Math.floor(meta.balance)) : v;
   }
-
   else if (a === 'add-credits'){
     meta.balance += 500;
     creditNote = '+500 credits added.';
     persist(); renderCasino();
   }
-
   else if (a === 'reset-credits'){
     if (!confirm('Reset your balance to ' + CREDIT_START + ' credits?')) return;
     meta.balance = CREDIT_START;
     creditNote = 'Balance reset.';
     persist(); renderCasino();
   }
-
   else if (a === 'bj-deal')   { bjDeal(); }
   else if (a === 'bj-hit')    { bjHit(); }
   else if (a === 'bj-stand')  { bjStand(); }
@@ -1602,15 +1944,13 @@ document.addEventListener('click', e => {
   else if (a === 'rl-spin')   { rouletteSpin(); }
   else if (a === 'cf-heads')  { coinFlip('heads'); }
   else if (a === 'cf-tails')  { coinFlip('tails'); }
-
-  else if (a === 'export')  { exportJSON(false); }
+  else if (a === 'moon-start'){ moonStart(); }
+  else if (a === 'moon-cashout'){ moonCashout(); }
+  else if (a === 'plinko-drop'){ plinkoDrop(); }
+  else if (a === 'export')  { exportJSON(); }
   else if (a === 'csv')     { exportCSV(); }
   else if (a === 'import')  { $('#importFile').click(); }
-
-  else if (a === 'restore'){
-    restoreSnapshot(btn.dataset.key);
-  }
-
+  else if (a === 'restore') { restoreSnapshot(btn.dataset.key); }
   else if (a === 'dismiss-install'){
     localStorage.setItem(KEY_HINT, '1');
     renderInstallHint();
@@ -1628,7 +1968,6 @@ document.addEventListener('visibilitychange', () => {
     saveBJ();
   }
 });
-
 window.addEventListener('pagehide', () => {
   if (meta.dirty){
     autoSnapshot('page hide');
@@ -1645,44 +1984,36 @@ window.addEventListener('pagehide', () => {
     draft.date = e.target.value || todayISO();
     persist();
   };
-
   $('#exSearch').addEventListener('input', renderPicker);
   $('#exSearch').addEventListener('focus', () => {
     if ($('#exSearch').value.trim()) renderPicker();
   });
-
   document.addEventListener('click', e => {
     if (!e.target.closest('#pickerResults') && e.target.id !== 'exSearch'){
       $('#pickerResults').hidden = true;
     }
   });
-
   $('#exFilter').onchange = renderExerciseHistory;
   $('#importFile').onchange = e => {
     const f = e.target.files?.[0];
     if (f) importJSON(f);
     e.target.value = '';
   };
-
   $('#rouletteType').onchange = e => {
     $('#rouletteNumber').hidden = e.target.value !== 'number';
   };
-
   const optD = $('#optAutoDownload');
   const optS = $('#optAutoSnapshot');
   optD.checked = !!meta.autoDownload;
   optS.checked = !!meta.autoSnapshot;
   optD.onchange = () => {
     meta.autoDownload = optD.checked;
-    persist();
-    renderBackup();
+    persist(); renderBackup();
   };
   optS.onchange = () => {
     meta.autoSnapshot = optS.checked;
-    persist();
-    renderRecovery();
+    persist(); renderRecovery();
   };
-
   requestPersistence();
   if (meta.autoSnapshot && workouts.length
       && (!meta.lastSnapshotAt
@@ -1690,6 +2021,8 @@ window.addEventListener('pagehide', () => {
     autoSnapshot('on open');
   }
   renderAll();
+  drawRoulette(0);
+  plinkoDraw(null, null);
 
   if ('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js').catch(() => {});
