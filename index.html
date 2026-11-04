@@ -126,7 +126,6 @@
   .last-session .best{margin-top:4px; font-size:12px; color:#7ee2a8; opacity:.85}
   .last-session .first{color:var(--muted); font-size:13px; font-style:italic}
 
-  /* ---------- casino ---------- */
   .balance-row{display:flex; justify-content:space-between; align-items:center; gap:12px}
   .balance-num{font-size:28px; font-weight:800; color:var(--accent); line-height:1.1}
   .tabs{display:flex; gap:6px; margin-top:14px; border-bottom:1px solid var(--line)}
@@ -158,6 +157,7 @@
   .spin-dot.black{background:#222}
   .spin-dot.green{background:#1e7a44}
   #rouletteCanvas{display:block; margin:0 auto; width:100%; max-width:280px}
+  #coinCanvas{display:block; margin:0 auto; width:100%; max-width:180px; height:auto}
   #moonCanvas{display:block; margin:0 auto; width:100%; max-width:320px;
               background: radial-gradient(ellipse at 50% 110%, #142033 0%, #04060a 70%);
               border-radius:10px; border:1px solid var(--line)}
@@ -173,7 +173,30 @@
   #plinkoCanvas{display:block; margin:0 auto; width:100%; max-width:340px;
                 background:#0f1216; border-radius:10px}
 
-  /* ---------- win popup ---------- */
+  #petDisplay{text-align:center}
+  .pet-cricket{
+    font-size: 64px; line-height: 1; display: inline-block;
+    transition: filter 0.4s;
+  }
+  .pet-cricket.golden{
+    filter: sepia(1) saturate(6) hue-rotate(-10deg) brightness(1.3)
+            drop-shadow(0 0 14px rgba(255,215,0,0.9));
+    animation: petHop 0.55s ease-in-out infinite;
+  }
+  @keyframes petHop{
+    0%, 100%{transform: translateY(0) rotate(-4deg)}
+    50%    {transform: translateY(-16px) rotate(4deg)}
+  }
+  .golden-cricket{
+    position: fixed; font-size: 56px; line-height: 1;
+    z-index: 9997; pointer-events: none;
+    filter: sepia(1) saturate(6) hue-rotate(-10deg) brightness(1.3)
+            drop-shadow(0 0 18px rgba(255,215,0,0.95));
+    transition: left 0.55s cubic-bezier(0.3,1.4,0.6,1),
+                top  0.55s cubic-bezier(0.3,1.4,0.6,1);
+  }
+  .golden-cricket[hidden]{display:none}
+
   #winPopup{
     position:fixed; inset:0; z-index:9999;
     display:flex; align-items:center; justify-content:center;
@@ -237,7 +260,6 @@
     to  {transform: scale(1) rotate(0); opacity: 1}
   }
 
-  /* ---------- loss flash ---------- */
   #lossFlash{
     position: fixed; inset: 0; pointer-events: none; z-index: 9998;
     background:
@@ -309,7 +331,6 @@
       <div class="stat-lbl">credits</div>
     </div>
     <div class="row shrink" style="gap:8px">
-      <button data-action="add-credits">＋500</button>
       <button data-action="reset-credits">Reset</button>
     </div>
   </div>
@@ -359,7 +380,8 @@
   </div>
 
   <div id="tab-cf" class="tabpane" hidden>
-    <div class="row">
+    <canvas id="coinCanvas"></canvas>
+    <div class="row" style="margin-top:6px">
       <button data-action="cf-heads">Heads</button>
       <button data-action="cf-tails">Tails</button>
     </div>
@@ -389,14 +411,36 @@
             style="margin-top:10px; width:100%">Drop Ball</button>
     <div class="result" id="res-plinko"></div>
     <p class="muted" style="margin-top:8px; text-align:center">
-      Tap repeatedly to drop multiple balls — they'll fall one after another.
+      Tap repeatedly to drop multiple balls. Your cluster's win/loss is tallied
+      2 seconds after the last ball lands.
     </p>
   </div>
 
   <p class="muted" style="margin:14px 0 0">
     Entertainment only — these credits have no real-world value, cannot be bought,
-    and cannot be cashed out. Finishing a workout earns you bonus credits.
+    and cannot be cashed out. Finishing a workout earns 1 credit per kg of volume.
   </p>
+</div>
+
+<h2>Cricket pet</h2>
+<div class="card">
+  <div id="petDisplay">
+    <div id="petCricket" class="pet-cricket">🦗</div>
+    <div class="stat-num" id="fedCredits">0</div>
+    <div class="stat-lbl">credits fed</div>
+  </div>
+  <input type="number" id="feedAmount" min="1" step="1" value="100"
+         placeholder="Amount to feed" style="margin-top:12px" />
+  <div class="row" style="margin-top:8px">
+    <button class="ghost" data-action="set-feed" data-v="10">10</button>
+    <button class="ghost" data-action="set-feed" data-v="100">100</button>
+    <button class="ghost" data-action="set-feed" data-v="1000">1K</button>
+    <button class="ghost" data-action="set-feed" data-v="10000">10K</button>
+    <button class="ghost" data-action="set-feed" data-v="max">Max</button>
+  </div>
+  <button class="primary" data-action="feed-cricket"
+          style="margin-top:10px; width:100%">Feed</button>
+  <p class="muted" id="feedStatus" style="margin-top:10px; text-align:center"></p>
 </div>
 
 <h2>Custom exercises</h2>
@@ -431,10 +475,18 @@
 <div class="card" id="recovery"></div>
 
 <p style="text-align:center;color:#8b93a1;font-size:11px;margin-top:30px">
-  v6 · built 2026-11-04
+  v8 · built 2026-11-04
 </p>
 
-<!-- win/loss feedback overlays -->
+<p style="text-align:center; margin:6px 0 18px">
+  <button data-action="dev-add-credits"
+          style="background:none;border:none;color:#8b93a1;opacity:0.16;
+                 font-size:9px;cursor:pointer;padding:6px 14px;
+                 letter-spacing:.08em">
+    add credits
+  </button>
+</p>
+
 <div id="lossFlash"></div>
 <div id="winPopup" hidden>
   <div class="popup-card">
@@ -447,6 +499,7 @@
     <div class="popup-sub">credits!</div>
   </div>
 </div>
+<div id="goldenCricket" class="golden-cricket" hidden>🦗</div>
 
 <script>
 /* ============================================================
@@ -628,7 +681,8 @@ const SNAPSHOT_MIN_GAP_MS = 60 * 1000;
 const MAX_PICKER_RESULTS = 60;
 
 const CREDIT_START = 1000;
-const WORKOUT_BONUS = 100;
+const GOLDEN_THRESHOLD = 1000000;
+const PLINKO_TALLY_DELAY = 2000; /* ms after last ball lands */
 
 const SUITS = ['♠','♥','♦','♣'];
 const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
@@ -697,9 +751,11 @@ let workouts = loadJSON(KEY_W, []);
 let draft    = loadJSON(KEY_D, { date: todayISO(), exercises: [] });
 let meta     = loadJSON(KEY_M, {
   lastBackupAt: null, lastSnapshotAt: null,
-  autoDownload: true, autoSnapshot: true, dirty: false, balance: CREDIT_START
+  autoDownload: true, autoSnapshot: true, dirty: false, balance: CREDIT_START,
+  fedCredits: 0
 });
 if (typeof meta.balance !== 'number' || !isFinite(meta.balance)) meta.balance = CREDIT_START;
+if (typeof meta.fedCredits !== 'number' || !isFinite(meta.fedCredits)) meta.fedCredits = 0;
 
 let customExercises = loadJSON(KEY_CX, []);
 if (!Array.isArray(customExercises)) customExercises = [];
@@ -710,17 +766,28 @@ if (!bj || !Array.isArray(bj.deck) || !Array.isArray(bj.player) || !Array.isArra
   bj = freshBJ();
 }
 
-/* roulette state */
 let rouletteRotation = 0;
 let rouletteAnimating = false;
 let rouletteHistory = [];
 
-/* moon state */
 let moon = { phase:'idle', bet:0, multiplier:1.00, crashPoint:0,
              startTime:0, cashedOut:false, cashoutMult:0 };
 let moonStars = null;
 
-/* plinko state */
+/* coin flip */
+let coinState = {
+  rotation: 0,
+  startRotation: 0,
+  endRotation: 0,
+  spinStartTime: 0,
+  spinDuration: 1400,
+  animating: false,
+  result: 'heads',
+  pendingSide: null,
+  pendingBet: 0
+};
+
+/* plinko */
 const PLINKO_ROWS = 8;
 const PLINKO_SLOTS = 9;
 const PLINKO_MULTS = [5.6, 2.1, 1.1, 1.0, 0.5, 1.0, 1.1, 2.1, 5.6];
@@ -730,7 +797,15 @@ const PLINKO_MAX_BALLS = 40;
 let plinkoBalls = [];
 let plinkoTickRunning = false;
 
-/* audio + feedback state */
+/* plinko cluster — accumulates until 2s after the last ball lands */
+let plinkoCluster = {
+  net: 0,
+  betSum: 0,
+  active: false,
+  timer: null
+};
+
+/* audio + feedback */
 let audioCtx = null;
 let lastWinSoundAt = 0;
 let lastLossSoundAt = 0;
@@ -796,29 +871,84 @@ function playWinSound(){
   spark.connect(sg); sg.connect(ctx.destination);
   spark.start(now + 0.36); spark.stop(now + 0.58);
 }
+
 function playSirenSound(){
   const ctx = ensureAudio();
   if (!ctx) return;
   const now = ctx.currentTime;
-  const dur = 1.1;
+  const dur = 2.2;
+
+  const master = ctx.createGain();
+  master.gain.value = 0.7;
+  master.connect(ctx.destination);
+
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(650, now);
-  const cycles = 6, per = dur / cycles;
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(880, now);
+  const cycles = 12, per = dur / cycles;
   for (let i = 0; i < cycles; i++){
-    osc.frequency.linearRampToValueAtTime(1050, now + i * per + per / 2);
-    osc.frequency.linearRampToValueAtTime(650,  now + (i + 1) * per);
+    osc.frequency.linearRampToValueAtTime(1500, now + i * per + per / 2);
+    osc.frequency.linearRampToValueAtTime(880,  now + (i + 1) * per);
   }
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.linearRampToValueAtTime(0.11, now + 0.05);
-  gain.gain.setValueAtTime(0.11, now + dur - 0.1);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-  osc.connect(gain); gain.connect(ctx.destination);
+  gain.gain.value = 1.0;
+  osc.connect(gain); gain.connect(master);
   osc.start(now); osc.stop(now + dur + 0.05);
+
+  const osc2 = ctx.createOscillator();
+  const g2 = ctx.createGain();
+  osc2.type = 'sawtooth';
+  osc2.frequency.setValueAtTime(888, now);
+  for (let i = 0; i < cycles; i++){
+    osc2.frequency.linearRampToValueAtTime(1508, now + i * per + per / 2);
+    osc2.frequency.linearRampToValueAtTime(888,  now + (i + 1) * per);
+  }
+  g2.gain.value = 0.7;
+  osc2.connect(g2); g2.connect(master);
+  osc2.start(now); osc2.stop(now + dur + 0.05);
 }
 
-/* ---------- win/loss feedback ---------- */
+function playFeedThanks(){
+  const ctx = ensureAudio();
+  if (ctx){
+    const now = ctx.currentTime;
+    [130.81, 164.81, 196.00, 261.63].forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 700;
+      osc.type = 'sawtooth';
+      osc.frequency.value = f;
+      const start = now + i * 0.015;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.linearRampToValueAtTime(0.075, start + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.9);
+      osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+      osc.start(start); osc.stop(start + 0.95);
+    });
+  }
+  try {
+    if (window.speechSynthesis){
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance('Thank you');
+      u.pitch = 0.1;
+      u.rate = 0.85;
+      u.volume = 1.0;
+      const voices = speechSynthesis.getVoices();
+      if (voices.length){
+        const preferred =
+          voices.find(v => /^en/i.test(v.lang) &&
+            /male|david|daniel|alex|fred|google us english|matthew|guy/i.test(v.name)) ||
+          voices.find(v => /^en/i.test(v.lang)) || voices[0];
+        if (preferred) u.voice = preferred;
+      }
+      speechSynthesis.speak(u);
+    }
+  } catch {}
+}
+
+/* ---------- feedback ---------- */
 function notifyWin(amount){
   if (!(amount > 0)) return;
   const now = performance.now();
@@ -851,7 +981,7 @@ function notifyLoss(){
     flash.classList.add('flash');
   }
   const now = performance.now();
-  if (now - lastLossSoundAt > 350){
+  if (now - lastLossSoundAt > 300){
     lastLossSoundAt = now;
     playSirenSound();
   }
@@ -1277,6 +1407,70 @@ async function renderStorage(){
       (persisted ? ' · persistent' : '');
   } catch {}
 }
+
+/* ---------- cricket pet ---------- */
+function renderPet(){
+  const fed = Math.floor(meta.fedCredits || 0);
+  const fedEl = $('#fedCredits');
+  if (fedEl) fedEl.textContent = fed.toLocaleString();
+  const golden = fed >= GOLDEN_THRESHOLD;
+  const cricket = $('#petCricket');
+  if (cricket) cricket.classList.toggle('golden', golden);
+  const status = $('#feedStatus');
+  if (status){
+    if (golden){
+      status.textContent = '🌟 The golden cricket is loose! 🌟';
+    } else {
+      status.textContent =
+        `${(GOLDEN_THRESHOLD - fed).toLocaleString()} fed credits to go ` +
+        `until the golden cricket unlocks.`;
+    }
+  }
+  if (golden) startGoldenCricket();
+}
+
+function startGoldenCricket(){
+  const el = $('#goldenCricket');
+  if (!el) return;
+  if (el.hidden){
+    el.hidden = false;
+    const W = window.innerWidth, H = window.innerHeight, pad = 60;
+    el.style.left = (pad + Math.random() * (W - pad * 2)) + 'px';
+    el.style.top  = (pad + Math.random() * (H - pad * 2)) + 'px';
+  }
+  if (!startGoldenCricket._started){
+    startGoldenCricket._started = true;
+    setTimeout(hopGoldenCricket, 900);
+  }
+}
+function hopGoldenCricket(){
+  const el = $('#goldenCricket');
+  if (!el || el.hidden) return;
+  const W = window.innerWidth, H = window.innerHeight, pad = 60;
+  el.style.left = (pad + Math.random() * (W - pad * 2)) + 'px';
+  el.style.top  = (pad + Math.random() * (H - pad * 2)) + 'px';
+  setTimeout(hopGoldenCricket, 800 + Math.random() * 1200);
+}
+
+function feedCricket(amount){
+  amount = Math.floor(amount);
+  if (!isFinite(amount) || amount <= 0){
+    alert('Enter a valid amount.');
+    return false;
+  }
+  if (amount > meta.balance){
+    alert('Not enough credits. You have ' + Math.floor(meta.balance) + '.');
+    return false;
+  }
+  meta.balance -= amount;
+  meta.fedCredits = (meta.fedCredits || 0) + amount;
+  creditNote = `Fed ${amount.toLocaleString()} credits to your cricket.`;
+  persist();
+  playFeedThanks();
+  renderCasino();
+  return true;
+}
+
 function renderAll(){
   renderPendingSets();
   renderDraft();
@@ -1286,6 +1480,7 @@ function renderAll(){
   renderExerciseHistory();
   renderCustomExercises();
   renderCasino();
+  renderPet();
   renderBackup();
   renderRecovery();
   renderRestoreBanner();
@@ -1326,7 +1521,6 @@ function renderBalance(){
     || 'Bet credits on games of chance. No real money involved.';
 }
 
-/* ----- blackjack ----- */
 function renderBlackjack(){
   const table = $('#bjTable'), ctrl = $('#bjControls'), res = $('#res-bj');
   if (!table) return;
@@ -1442,7 +1636,6 @@ function bjDouble(){
   bjStand();
 }
 
-/* ----- roulette ----- */
 function rouletteColor(n){
   if (n === 0) return 'green';
   return RED_NUMBERS.has(n) ? 'red' : 'black';
@@ -1592,13 +1785,114 @@ function finishRouletteSpin(n, type, picked, bet){
   persist(); renderCasino();
 }
 
-/* ----- coin flip ----- */
+/* ----- coin flip (visual) ----- */
+function drawCoin(){
+  const canvas = $('#coinCanvas');
+  if (!canvas) return;
+  const DPR = window.devicePixelRatio || 1;
+  const W = 180, H = 180;
+  if (canvas.width !== W * DPR || canvas.height !== H * DPR){
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H / 2, r = 62;
+  const cosA = Math.cos(coinState.rotation);
+  const scaleX = Math.max(Math.abs(cosA), 0.03);
+  const showHeads = cosA >= 0;
+
+  /* shadow */
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + r + 16, r * 0.8 * scaleX, 8, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.32)';
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scaleX, 1);
+
+  /* coin body */
+  const grad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.15, 0, 0, r);
+  grad.addColorStop(0, '#fff3c4');
+  grad.addColorStop(0.4, '#f5c842');
+  grad.addColorStop(0.75, '#c9940a');
+  grad.addColorStop(1, '#6b4f00');
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = '#4a3600';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  /* inner ring */
+  ctx.beginPath();
+  ctx.arc(0, 0, r - 11, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,240,180,0.55)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  /* face symbol */
+  ctx.fillStyle = '#4a3600';
+  ctx.font = 'bold 64px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(showHeads ? 'H' : 'T', 0, 6);
+
+  ctx.restore();
+}
 function coinFlip(side){
+  if (coinState.animating) return;
   const bet = readBet();
   if (!bet) return gameMsg('cf', 'Enter a valid bet first.', 'lose');
   if (bet > meta.balance) return gameMsg('cf', 'Not enough credits.', 'lose');
+
   meta.balance -= bet;
+  persist(); renderBalance();
+
   const result = Math.random() < 0.5 ? 'heads' : 'tails';
+  coinState.result = result;
+  coinState.pendingSide = side;
+  coinState.pendingBet = bet;
+
+  const startRot = coinState.rotation;
+  const extraSpins = 16 * Math.PI; /* 8 full turns */
+  let endRot = startRot + extraSpins;
+  const wantHeads = (result === 'heads');
+  const willShowHeads = Math.cos(endRot) >= 0;
+  if (willShowHeads !== wantHeads) endRot += Math.PI;
+
+  coinState.startRotation = startRot;
+  coinState.endRotation = endRot;
+  coinState.spinStartTime = performance.now();
+  coinState.animating = true;
+
+  gameMsg('cf', 'Flipping…', '');
+  requestAnimationFrame(coinTick);
+}
+function coinTick(){
+  const t = Math.min(1, (performance.now() - coinState.spinStartTime) / coinState.spinDuration);
+  const eased = 1 - Math.pow(1 - t, 3);
+  coinState.rotation = coinState.startRotation
+                     + (coinState.endRotation - coinState.startRotation) * eased;
+  drawCoin();
+  if (t < 1){
+    requestAnimationFrame(coinTick);
+  } else {
+    coinState.animating = false;
+    finishCoinFlip();
+  }
+}
+function finishCoinFlip(){
+  const result = coinState.result;
+  const side = coinState.pendingSide;
+  const bet = coinState.pendingBet;
+  coinState.pendingSide = null;
+  coinState.pendingBet = 0;
+
   if (result === side){
     meta.balance += bet * 2;
     gameMsg('cf', `It's ${result} — you win +${bet} credits.`, 'win');
@@ -1607,7 +1901,7 @@ function coinFlip(side){
     gameMsg('cf', `It's ${result} — you lose ${bet} credits.`, 'lose');
     notifyLoss();
   }
-  persist(); renderCasino();
+  persist(); renderBalance();
 }
 
 /* ----- Moon (crash) ----- */
@@ -1642,7 +1936,6 @@ function moonDraw(progress, crashed){
   ctx.clearRect(0, 0, W, H);
   if (!moonStars) moonInitStars();
 
-  /* scrolling starfield — gives upward motion feel */
   const scroll = progress * 500;
   for (const s of moonStars){
     const y = ((s.y + scroll * s.speed) % H + H) % H;
@@ -1652,11 +1945,9 @@ function moonDraw(progress, crashed){
     ctx.fill();
   }
 
-  /* rocket position */
   const rx = 40 + progress * (W - 100);
   const ry = H - 40 - progress * (H - 80);
 
-  /* flame */
   if (!crashed){
     const flameLen = 14 + Math.random() * 6 + progress * 10;
     const grad = ctx.createLinearGradient(rx, ry + 8, rx, ry + 8 + flameLen);
@@ -1672,7 +1963,6 @@ function moonDraw(progress, crashed){
     ctx.fill();
   }
 
-  /* rocket body */
   ctx.save();
   ctx.translate(rx, ry);
   const angle = crashed ? 0.2 : (-Math.PI / 4 + progress * 0.12);
@@ -1704,7 +1994,6 @@ function moonDraw(progress, crashed){
 
   ctx.restore();
 
-  /* small crash puff */
   if (crashed){
     const t = performance.now() / 180;
     const r = 12 + Math.sin(t) * 3;
@@ -1818,8 +2107,6 @@ function moonCashout(){
 function drawPlinkoBoard(ctx, W){
   const cx = W / 2;
   const y0 = 50, rowSp = 30, sp = 32;
-
-  /* slots */
   for (let j = 0; j < PLINKO_SLOTS; j++){
     const x = cx + (j - 4) * sp;
     const y = 270, w = 30, h = 65, r = 6;
@@ -1834,15 +2121,12 @@ function drawPlinkoBoard(ctx, W){
     ctx.quadraticCurveTo(x - w/2, y, x - w/2 + r, y);
     ctx.closePath();
     ctx.fill();
-
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 11px -apple-system, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(PLINKO_MULTS[j] + 'x', x, y + 42);
   }
-
-  /* pegs */
   ctx.fillStyle = '#e6e8eb';
   for (let r = 0; r < PLINKO_ROWS; r++){
     for (let i = 0; i <= r; i++){
@@ -1958,9 +2242,7 @@ function plinkoDrop(){
 }
 function plinkoTick(){
   const now = performance.now();
-
   plinkoBalls = plinkoBalls.filter(b => !(b.resolved && now > b.heldUntil));
-
   for (const b of plinkoBalls){
     if (b.resolved) continue;
     const elapsed = now - b.startTime;
@@ -1972,39 +2254,68 @@ function plinkoTick(){
       resolvePlinkoBall(b);
     }
   }
-
   plinkoDrawMultiple();
-
-  if (plinkoBalls.length > 0){
-    requestAnimationFrame(plinkoTick);
-  } else {
-    plinkoTickRunning = false;
-  }
+  if (plinkoBalls.length > 0){ requestAnimationFrame(plinkoTick); }
+  else { plinkoTickRunning = false; }
 }
+
+/* Add to the cluster — no per-ball win/loss visuals. */
 function resolvePlinkoBall(b){
   const mult = PLINKO_MULTS[b.slot];
   const payout = Math.floor(b.bet * mult);
   meta.balance += payout;
   const net = payout - b.bet;
-  if (net > 0){
-    gameMsg('plinko', `Landed ${mult}× — +${net} credits!`, 'win');
-    notifyWin(net);
-  } else if (net < 0){
-    gameMsg('plinko', `Landed ${mult}× — ${net} credits.`, 'lose');
-    notifyLoss();
-  } else {
-    gameMsg('plinko', `Landed ${mult}× — break-even.`, '');
-  }
+
+  plinkoCluster.net += net;
+  plinkoCluster.betSum += b.bet;
+  plinkoCluster.active = true;
+
+  if (plinkoCluster.timer) clearTimeout(plinkoCluster.timer);
+  plinkoCluster.timer = setTimeout(tallyPlinkoCluster, PLINKO_TALLY_DELAY);
+
+  updatePlinkoLiveMessage();
+
   persist();
   renderBalance();
 }
 
-/* ---------- main casino render ---------- */
+function updatePlinkoLiveMessage(){
+  if (!plinkoCluster.active) return;
+  const net = plinkoCluster.net;
+  const bet = plinkoCluster.betSum;
+  const netStr = net >= 0 ? `+${net.toLocaleString()}` : `${net.toLocaleString()}`;
+  gameMsg('plinko', `Cluster net ${netStr} · ${bet.toLocaleString()} wagered · tallying in ${(PLINKO_TALLY_DELAY/1000).toFixed(0)}s after last ball lands`,
+    net > 0 ? 'win' : net < 0 ? 'lose' : '');
+}
+
+/* Fires 2s after the last ball lands — one visual for the whole cluster. */
+function tallyPlinkoCluster(){
+  plinkoCluster.timer = null;
+  if (!plinkoCluster.active) return;
+
+  const net = plinkoCluster.net;
+  const betSum = plinkoCluster.betSum;
+  plinkoCluster.net = 0;
+  plinkoCluster.betSum = 0;
+  plinkoCluster.active = false;
+
+  if (net > 0){
+    gameMsg('plinko', `Cluster win: +${net.toLocaleString()} credits (${betSum.toLocaleString()} wagered).`, 'win');
+    notifyWin(net);
+  } else if (net < 0){
+    gameMsg('plinko', `Cluster loss: ${net.toLocaleString()} credits (${betSum.toLocaleString()} wagered).`, 'lose');
+    notifyLoss();
+  } else {
+    gameMsg('plinko', `Cluster break-even (${betSum.toLocaleString()} wagered).`, '');
+  }
+}
+
 function renderCasino(){
   renderBalance();
   renderBlackjack();
   drawRoulette(rouletteRotation);
   renderSpinHistory();
+  drawCoin();
   renderMoonUI();
   plinkoDrawMultiple();
 }
@@ -2167,14 +2478,15 @@ document.addEventListener('click', e => {
   }
   else if (a === 'finish'){
     if (!draft.exercises.length){ alert('Nothing to save — add an exercise first.'); return; }
+    const finishedVolume = volumeOf({ exercises: draft.exercises });
     workouts.push({
       id: uid(), date: draft.date, createdAt: Date.now(), exercises: draft.exercises
     });
     draft = { date: todayISO(), exercises: [] };
     $('#date').value = draft.date;
     meta.dirty = true;
-    meta.balance += WORKOUT_BONUS;
-    creditNote = `+${WORKOUT_BONUS} credits earned for finishing a workout 🎉`;
+    meta.balance += finishedVolume;
+    creditNote = `+${finishedVolume} credits earned (1 per kg of volume) 🎉`;
     persist();
     autoSnapshot('after finish');
     autoBackupAfterWorkout();
@@ -2196,7 +2508,6 @@ document.addEventListener('click', e => {
     meta.dirty = true;
     persist(); renderAll();
   }
-  /* ---- casino ---- */
   else if (a === 'tab'){
     document.querySelectorAll('.tab').forEach(t =>
       t.classList.toggle('active', t.dataset.tab === btn.dataset.tab));
@@ -2208,16 +2519,30 @@ document.addEventListener('click', e => {
     const v = btn.dataset.v;
     $('#betAmount').value = v === 'max' ? Math.max(1, Math.floor(meta.balance)) : v;
   }
-  else if (a === 'add-credits'){
-    meta.balance += 500;
-    creditNote = '+500 credits added.';
-    persist(); renderCasino();
-  }
   else if (a === 'reset-credits'){
     if (!confirm('Reset your balance to ' + CREDIT_START + ' credits?')) return;
     meta.balance = CREDIT_START;
     creditNote = 'Balance reset.';
     persist(); renderCasino();
+  }
+  else if (a === 'dev-add-credits'){
+    const raw = prompt('Add credits — enter amount:');
+    if (raw === null) return;
+    const v = Math.floor(Number(raw));
+    if (!isFinite(v) || v <= 0) return;
+    meta.balance += v;
+    creditNote = `+${v.toLocaleString()} credits added.`;
+    persist(); renderCasino();
+  }
+  else if (a === 'set-feed'){
+    const v = btn.dataset.v;
+    $('#feedAmount').value = v === 'max'
+      ? Math.max(1, Math.floor(meta.balance))
+      : v;
+  }
+  else if (a === 'feed-cricket'){
+    const amount = Math.floor(Number($('#feedAmount').value));
+    feedCricket(amount);
   }
   else if (a === 'bj-deal')    { bjDeal(); }
   else if (a === 'bj-hit')     { bjHit(); }
@@ -2291,6 +2616,15 @@ window.addEventListener('pagehide', () => {
   optD.onchange = () => { meta.autoDownload = optD.checked; persist(); renderBackup(); };
   optS.onchange = () => { meta.autoSnapshot = optS.checked; persist(); renderRecovery(); };
 
+  if (window.speechSynthesis){
+    try {
+      speechSynthesis.getVoices();
+      if (speechSynthesis.onvoiceschanged !== undefined){
+        speechSynthesis.onvoiceschanged = () => {};
+      }
+    } catch {}
+  }
+
   requestPersistence();
   if (meta.autoSnapshot && workouts.length
       && (!meta.lastSnapshotAt
@@ -2299,6 +2633,7 @@ window.addEventListener('pagehide', () => {
   }
   moonInitStars();
   renderAll();
+  drawCoin();
 
   if ('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js').catch(() => {});
