@@ -7,10 +7,10 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Liftoff" />
+<meta name="apple-mobile-web-app-title" content="Jiminy Cricket" />
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icon-192.png" />
-<title>Liftoff</title>
+<title>Jiminy Cricket</title>
 <style>
   :root{
     --bg:#0f1115; --card:#181b21; --line:#262a33;
@@ -124,11 +124,42 @@
   .last-session .sets{margin-top:4px; color:#c8f5db; font-size:13px}
   .last-session .best{margin-top:4px; font-size:12px; color:#7ee2a8; opacity:.85}
   .last-session .first{color:var(--muted); font-size:13px; font-style:italic}
+
+  /* ---------- casino ---------- */
+  .balance-row{display:flex; justify-content:space-between; align-items:center; gap:12px}
+  .balance-num{font-size:28px; font-weight:800; color:var(--accent); line-height:1.1}
+  .tabs{display:flex; gap:6px; margin-top:14px; border-bottom:1px solid var(--line)}
+  .tab{flex:1; background:transparent; border:1px solid transparent;
+       border-bottom:none; border-radius:8px 8px 0 0; color:var(--muted);
+       padding:8px 4px; font-size:13px}
+  .tab.active{background:#0f1216; border-color:var(--line); color:var(--text);
+              font-weight:600}
+  .tabpane{padding-top:12px}
+  .hand-row{display:flex; align-items:center; gap:8px; margin-top:8px}
+  .hand-lbl{width:56px; flex:0 0 auto; color:var(--muted); font-size:13px}
+  .hand{display:flex; gap:5px; flex-wrap:wrap; flex:1}
+  .hand-tot{font-weight:700; font-size:14px}
+  .pcard{display:inline-flex; align-items:center; justify-content:center;
+         min-width:38px; height:50px; padding:0 6px; border-radius:6px;
+         background:#f2f4f8; color:#111; font-weight:700; font-size:14px;
+         border:1px solid #cbd2de}
+  .pcard.red{color:#c0392b}
+  .pcard.back{background:#2b3240; color:var(--muted); border-color:var(--line)}
+  .result{margin-top:10px; font-size:14px; min-height:21px}
+  .result.win{color:var(--ok-fg)}
+  .result.lose{color:var(--danger)}
+  .spin-hist{display:flex; gap:4px; flex-wrap:wrap; margin-top:10px}
+  .spin-dot{width:22px; height:22px; border-radius:50%; font-size:11px;
+            display:flex; align-items:center; justify-content:center;
+            font-weight:700; color:#fff}
+  .spin-dot.red{background:#c0392b}
+  .spin-dot.black{background:#222}
+  .spin-dot.green{background:#1e7a44}
 </style>
 </head>
 <body>
 
-<h1>Liftoff 🚀</h1>
+<h1>Jiminy Cricket 🦗</h1>
 
 <div id="installHint" class="banner ok" hidden>
   Tap <strong>Share</strong> → <strong>Add to Home Screen</strong> for the full-screen app.
@@ -172,6 +203,77 @@
 <h2>History</h2>
 <div class="card" id="history"></div>
 
+<h2>Casino · fake money only</h2>
+<div class="card">
+  <div class="balance-row">
+    <div>
+      <div class="balance-num" id="balanceNum">0</div>
+      <div class="stat-lbl">credits</div>
+    </div>
+    <div class="row shrink" style="gap:8px">
+      <button data-action="add-credits">＋500</button>
+      <button data-action="reset-credits">Reset</button>
+    </div>
+  </div>
+  <p class="muted" id="creditNote" style="margin:8px 0 0"></p>
+
+  <input type="number" id="betAmount" inputmode="numeric" min="1" step="1"
+         value="25" placeholder="Bet" style="margin-top:12px" />
+  <div class="row" style="margin-top:8px">
+    <button class="ghost" data-action="set-bet" data-v="10">10</button>
+    <button class="ghost" data-action="set-bet" data-v="25">25</button>
+    <button class="ghost" data-action="set-bet" data-v="50">50</button>
+    <button class="ghost" data-action="set-bet" data-v="100">100</button>
+    <button class="ghost" data-action="set-bet" data-v="max">Max</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-action="tab" data-tab="bj">Blackjack</button>
+    <button class="tab" data-action="tab" data-tab="rl">Roulette</button>
+    <button class="tab" data-action="tab" data-tab="cf">Coin flip</button>
+  </div>
+
+  <div id="tab-bj" class="tabpane">
+    <div id="bjTable"></div>
+    <div class="row" style="margin-top:10px" id="bjControls"></div>
+    <div class="result" id="res-bj"></div>
+  </div>
+
+  <div id="tab-rl" class="tabpane" hidden>
+    <select id="rouletteType">
+      <option value="red">Red — pays 1:1</option>
+      <option value="black">Black — pays 1:1</option>
+      <option value="odd">Odd — pays 1:1</option>
+      <option value="even">Even — pays 1:1</option>
+      <option value="low">Low 1–18 — pays 1:1</option>
+      <option value="high">High 19–36 — pays 1:1</option>
+      <option value="number">Single number — pays 35:1</option>
+    </select>
+    <input type="number" id="rouletteNumber" min="0" max="36" step="1"
+           placeholder="Number 0–36" hidden style="margin-top:8px" />
+    <button class="primary" data-action="rl-spin"
+            style="margin-top:10px; width:100%">Spin</button>
+    <div class="result" id="res-rl"></div>
+    <div class="spin-hist" id="rlHistory"></div>
+  </div>
+
+  <div id="tab-cf" class="tabpane" hidden>
+    <div class="row">
+      <button data-action="cf-heads">Heads</button>
+      <button data-action="cf-tails">Tails</button>
+    </div>
+    <div class="result" id="res-cf"></div>
+  </div>
+
+  <p class="muted" style="margin:14px 0 0">
+    Entertainment only — these credits have no real-world value, cannot be bought,
+    and cannot be cashed out. Finishing a workout earns you bonus credits.
+  </p>
+</div>
+
+<h2>Custom exercises</h2>
+<div class="card" id="customExList"></div>
+
 <h2>Backup</h2>
 <div class="card">
   <div class="toggle">
@@ -199,6 +301,10 @@
 
 <h2>Recovery snapshots</h2>
 <div class="card" id="recovery"></div>
+
+<p style="text-align:center;color:#8b93a1;font-size:11px;margin-top:30px">
+  v4 · built 2026-11-04
+</p>
 
 <script>
 /* ============================================================
@@ -380,15 +486,23 @@ const EXERCISE_LIBRARY = [
   {n:"Jumping Jack", c:"Cardio"},
 ];
 
-/* ---------- constants ---------- */
+/* ---------- constants ----------
+   NOTE: storage keys keep their original "liftoff." prefix on purpose so
+   existing workout data survives the rename to Jiminy Cricket. */
 const KEY_W = 'liftoff.workouts.v1';
 const KEY_D = 'liftoff.draft.v1';
 const KEY_M = 'liftoff.meta.v1';
 const KEY_HINT = 'liftoff.installHintDismissed';
+const KEY_CX = 'liftoff.customExercises.v1';
+const KEY_BJ = 'liftoff.blackjack.v1';
 const SNAP_PREFIX = 'liftoff.snapshot.';
 const MAX_SNAPSHOTS = 8;
 const SNAPSHOT_MIN_GAP_MS = 60 * 1000;
 const MAX_PICKER_RESULTS = 60;
+
+/* casino tuning */
+const CREDIT_START = 1000;
+const WORKOUT_BONUS = 100;
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g,
@@ -412,7 +526,6 @@ function relTime(ts){
   return new Date(ts).toLocaleDateString();
 }
 function daysAgoISO(dateStr){
-  // dateStr is YYYY-MM-DD; compare to today (local)
   const [y, m, d] = dateStr.split('-').map(Number);
   const then = new Date(y, m - 1, d).getTime();
   const now = new Date();
@@ -442,8 +555,27 @@ let meta     = loadJSON(KEY_M, {
   lastSnapshotAt: null,
   autoDownload: true,
   autoSnapshot: true,
-  dirty: false
+  dirty: false,
+  balance: CREDIT_START
 });
+if (typeof meta.balance !== 'number' || !isFinite(meta.balance)){
+  meta.balance = CREDIT_START;
+}
+
+/* custom exercises the user has created by logging an unknown name */
+let customExercises = loadJSON(KEY_CX, []);
+if (!Array.isArray(customExercises)) customExercises = [];
+customExercises = customExercises.filter(e => e && typeof e.n === 'string');
+
+/* blackjack table state (persisted so a reload can't dodge a live hand) */
+let bj = loadJSON(KEY_BJ, null);
+if (!bj || !Array.isArray(bj.deck) || !Array.isArray(bj.player)
+    || !Array.isArray(bj.dealer)) {
+  bj = freshBJ();
+}
+
+let creditNote = '';
+let rouletteHistory = [];
 
 let pendingSets = [blankSet()];
 let exName = '';
@@ -452,6 +584,7 @@ function persist(){
   localStorage.setItem(KEY_W, JSON.stringify(workouts));
   localStorage.setItem(KEY_D, JSON.stringify(draft));
   localStorage.setItem(KEY_M, JSON.stringify(meta));
+  localStorage.setItem(KEY_CX, JSON.stringify(customExercises));
 }
 
 async function requestPersistence(){
@@ -460,6 +593,37 @@ async function requestPersistence(){
       await navigator.storage.persist();
     }
   } catch {}
+}
+
+/* ---------- custom exercise catalogue ---------- */
+function isInLibrary(name){
+  const k = name.trim().toLowerCase();
+  return EXERCISE_LIBRARY.some(e => e.n.toLowerCase() === k);
+}
+function isCustomName(name){
+  const k = name.trim().toLowerCase();
+  return customExercises.some(e => e.n.toLowerCase() === k);
+}
+function addCustomExercise(name){
+  const n = name.trim();
+  if (!n) return false;
+  if (isInLibrary(n) || isCustomName(n)) return false;
+  customExercises.push({ n, c: 'Custom' });
+  localStorage.setItem(KEY_CX, JSON.stringify(customExercises));
+  return true;
+}
+function removeCustomExercise(name){
+  const k = name.trim().toLowerCase();
+  const before = customExercises.length;
+  customExercises = customExercises.filter(e => e.n.toLowerCase() !== k);
+  if (customExercises.length !== before){
+    localStorage.setItem(KEY_CX, JSON.stringify(customExercises));
+    return true;
+  }
+  return false;
+}
+function allExercises(){
+  return [...customExercises, ...EXERCISE_LIBRARY];
 }
 
 /* ---------- "last session" lookups ---------- */
@@ -559,8 +723,9 @@ const bestSet = sets => sets.reduce((b, s) =>
 /* ---------- exercise picker ---------- */
 function filterLibrary(query){
   const q = query.trim().toLowerCase();
-  if (!q) return EXERCISE_LIBRARY.slice(0, MAX_PICKER_RESULTS);
-  return EXERCISE_LIBRARY
+  const pool = allExercises();
+  if (!q) return pool.slice(0, MAX_PICKER_RESULTS);
+  return pool
     .filter(e => e.n.toLowerCase().includes(q) || e.c.toLowerCase().includes(q))
     .slice(0, MAX_PICKER_RESULTS);
 }
@@ -584,7 +749,8 @@ function renderPicker(){
       const b = bestSet(last.sets);
       lastHtml = `<div class="pick-last">Last: ${b.weight}kg × ${b.reps} · ${shortAgo(last.date)}</div>`;
     }
-    return `<div class="pick-item" data-action="pick-exercise" data-name="${esc(e.n)}">
+    const cls = isCustomName(e.n) ? ' custom' : '';
+    return `<div class="pick-item${cls}" data-action="pick-exercise" data-name="${esc(e.n)}">
       <div class="pick-body">
         <div class="pick-name">${esc(e.n)}</div>
         ${lastHtml}
@@ -607,7 +773,7 @@ function renderPicker(){
         <div class="pick-name">Use custom: “${esc(trimmed)}”</div>
         ${lastHtml}
       </div>
-      <div class="pick-cat">Custom</div>
+      <div class="pick-cat">New</div>
     </div>`;
   }
 
@@ -642,7 +808,6 @@ function selectExercise(name){
   $('#selectedExercise').textContent = 'Selected: ' + name;
   $('#pickerResults').hidden = true;
 
-  // Pre-fill pending sets from last session
   const last = lastSessionFor(name);
   if (last && last.sets.length){
     pendingSets = last.sets.map(s => ({
@@ -764,6 +929,7 @@ function renderStats(){
 function allExerciseNames(){
   const s = new Set();
   workouts.forEach(w => w.exercises.forEach(e => s.add(e.name)));
+  customExercises.forEach(e => s.add(e.n));
   return [...s].sort((a, b) => a.localeCompare(b));
 }
 
@@ -806,6 +972,20 @@ function renderExerciseHistory(){
         </div>`).join('')}
     </div>`;
   }).join('');
+}
+
+function renderCustomExercises(){
+  const el = $('#customExList');
+  if (!customExercises.length){
+    el.innerHTML = '<p class="empty">None yet — log an exercise that isn\'t in the ' +
+      'built-in list and it will be saved here automatically.</p>';
+    return;
+  }
+  el.innerHTML = customExercises.map(e => `
+    <div class="snaprow">
+      <div class="meta"><div class="when">${esc(e.n)}</div></div>
+      <button class="x" data-action="rm-custom" data-name="${esc(e.n)}">✕</button>
+    </div>`).join('');
 }
 
 function renderBackup(){
@@ -893,11 +1073,269 @@ function renderAll(){
   renderStats();
   renderExercisePicker();
   renderExerciseHistory();
+  renderCustomExercises();
+  renderCasino();
   renderBackup();
   renderRecovery();
   renderRestoreBanner();
   renderInstallHint();
   renderStorage();
+}
+
+/* ============================================================
+   CASINO — fake credits only
+   ============================================================ */
+const SUITS = ['♠','♥','♦','♣'];
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const RED_NUMBERS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+
+function newDeck(){
+  const d = [];
+  for (const s of SUITS) for (const r of RANKS) d.push({ r, s });
+  for (let i = d.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  return d;
+}
+function freshBJ(){
+  return { deck: newDeck(), player: [], dealer: [], bet: 0,
+           phase: 'idle', result: '', kind: '' };
+}
+function saveBJ(){
+  try { localStorage.setItem(KEY_BJ, JSON.stringify(bj)); } catch {}
+}
+function handValue(cards){
+  let total = 0, aces = 0;
+  for (const c of cards){
+    if (c.r === 'A'){ aces++; total += 11; }
+    else if (c.r === 'K' || c.r === 'Q' || c.r === 'J') total += 10;
+    else total += Number(c.r);
+  }
+  while (total > 21 && aces > 0){ total -= 10; aces--; }
+  return total;
+}
+function cardHtml(c, hidden){
+  if (hidden) return '<span class="pcard back">?</span>';
+  const red = (c.s === '♥' || c.s === '♦') ? ' red' : '';
+  return `<span class="pcard${red}">${c.r}${c.s}</span>`;
+}
+function readBet(){
+  const v = Math.floor(Number($('#betAmount').value));
+  return (isFinite(v) && v > 0) ? v : 0;
+}
+function gameMsg(which, text, kind){
+  const el = document.getElementById('res-' + which);
+  if (el){ el.textContent = text; el.className = 'result ' + (kind || ''); }
+}
+function renderBalance(){
+  $('#balanceNum').textContent = Math.round(meta.balance).toLocaleString();
+  $('#creditNote').textContent = creditNote
+    || 'Bet credits on games of chance. No real money involved.';
+}
+function renderCasino(){
+  renderBalance();
+  renderBlackjack();
+  renderSpinHistory();
+}
+
+/* ----- blackjack ----- */
+function renderBlackjack(){
+  const table = $('#bjTable'), ctrl = $('#bjControls'), res = $('#res-bj');
+  if (!table) return;
+
+  if (!bj.player.length){
+    table.innerHTML = '<p class="muted" style="margin:0">Place a bet and press ' +
+      'Deal. Blackjack pays 3:2 · dealer stands on 17 · double allowed on any ' +
+      'first two cards.</p>';
+  } else {
+    const hideHole = bj.phase === 'player';
+    const dv = hideHole ? handValue([bj.dealer[0]]) : handValue(bj.dealer);
+    table.innerHTML = `
+      <div class="hand-row"><span class="hand-lbl">Dealer</span>
+        <div class="hand">${bj.dealer.map((c, i) => cardHtml(c, hideHole && i === 1)).join('')}</div>
+        <span class="hand-tot">${dv}${hideHole ? '+' : ''}</span></div>
+      <div class="hand-row"><span class="hand-lbl">You</span>
+        <div class="hand">${bj.player.map(c => cardHtml(c, false)).join('')}</div>
+        <span class="hand-tot">${handValue(bj.player)}</span></div>
+      <div class="muted" style="margin-top:6px">Bet: ${bj.bet} credits</div>`;
+  }
+
+  ctrl.innerHTML = bj.phase === 'player'
+    ? `<button class="primary" data-action="bj-hit">Hit</button>
+       <button data-action="bj-stand">Stand</button>
+       ${bj.player.length === 2 && meta.balance >= bj.bet
+         ? '<button data-action="bj-double">Double</button>' : ''}`
+    : `<button class="primary" data-action="bj-deal">Deal</button>`;
+
+  res.textContent = bj.result || '';
+  res.className = 'result ' + (bj.kind || '');
+}
+
+function bjDeal(){
+  if (bj.phase === 'player') return;
+  const bet = readBet();
+  if (!bet) return gameMsg('bj', 'Enter a valid bet first.', 'lose');
+  if (bet > meta.balance) return gameMsg('bj', 'Not enough credits.', 'lose');
+
+  const deck = (bj.deck && bj.deck.length >= 20) ? bj.deck : newDeck();
+  bj = { deck, player: [], dealer: [], bet, phase: 'player', result: '', kind: '' };
+  meta.balance -= bet;
+
+  bj.player.push(bj.deck.pop(), bj.deck.pop());
+  bj.dealer.push(bj.deck.pop(), bj.deck.pop());
+
+  const pBJ = bj.player.length === 2 && handValue(bj.player) === 21;
+  const dBJ = bj.dealer.length === 2 && handValue(bj.dealer) === 21;
+
+  if (pBJ || dBJ){
+    bj.phase = 'done';
+    if (pBJ && dBJ){
+      meta.balance += bet;
+      bj.result = 'Both blackjack — push.';
+      bj.kind = '';
+    } else if (pBJ){
+      const payout = Math.ceil(bet * 2.5);
+      meta.balance += payout;
+      bj.result = `Blackjack! Paid 3:2 (+${payout - bet}).`;
+      bj.kind = 'win';
+    } else {
+      bj.result = 'Dealer blackjack — you lose.';
+      bj.kind = 'lose';
+    }
+  }
+
+  saveBJ(); persist(); renderCasino();
+}
+
+function bjHit(){
+  if (bj.phase !== 'player') return;
+  bj.player.push(bj.deck.pop());
+  const v = handValue(bj.player);
+  if (v > 21){
+    bj.phase = 'done';
+    bj.result = 'Bust — you lose.';
+    bj.kind = 'lose';
+  } else if (v === 21){
+    bjStand();
+    return;
+  }
+  saveBJ(); renderCasino();
+}
+
+function bjStand(){
+  if (bj.phase !== 'player') return;
+  bj.phase = 'done';
+  while (handValue(bj.dealer) < 17) bj.dealer.push(bj.deck.pop());
+
+  const p = handValue(bj.player), d = handValue(bj.dealer);
+  if (d > 21){
+    meta.balance += bj.bet * 2;
+    bj.result = `Dealer busts with ${d} — you win +${bj.bet}.`;
+    bj.kind = 'win';
+  } else if (p > d){
+    meta.balance += bj.bet * 2;
+    bj.result = `${p} beats ${d} — you win +${bj.bet}.`;
+    bj.kind = 'win';
+  } else if (p === d){
+    meta.balance += bj.bet;
+    bj.result = `Push at ${p} — bet returned.`;
+    bj.kind = '';
+  } else {
+    bj.result = `Dealer wins ${d} to ${p}.`;
+    bj.kind = 'lose';
+  }
+  saveBJ(); persist(); renderCasino();
+}
+
+function bjDouble(){
+  if (bj.phase !== 'player' || bj.player.length !== 2) return;
+  if (meta.balance < bj.bet) return gameMsg('bj', 'Not enough credits to double.', 'lose');
+  meta.balance -= bj.bet;
+  bj.bet *= 2;
+  bj.player.push(bj.deck.pop());
+  if (handValue(bj.player) > 21){
+    bj.phase = 'done';
+    bj.result = 'Bust on the double — you lose.';
+    bj.kind = 'lose';
+    saveBJ(); persist(); renderCasino();
+    return;
+  }
+  bjStand();
+}
+
+/* ----- roulette ----- */
+function rouletteColor(n){
+  if (n === 0) return 'green';
+  return RED_NUMBERS.has(n) ? 'red' : 'black';
+}
+
+function renderSpinHistory(){
+  const el = $('#rlHistory');
+  if (!el) return;
+  el.innerHTML = rouletteHistory.map(n => {
+    const c = rouletteColor(n);
+    return `<span class="spin-dot ${c}" title="${c}">${n}</span>`;
+  }).join('');
+}
+
+function rouletteSpin(){
+  const bet = readBet();
+  if (!bet) return gameMsg('rl', 'Enter a valid bet first.', 'lose');
+  if (bet > meta.balance) return gameMsg('rl', 'Not enough credits.', 'lose');
+
+  const type = $('#rouletteType').value;
+  let picked = null;
+  if (type === 'number'){
+    picked = parseInt($('#rouletteNumber').value, 10);
+    if (!(picked >= 0 && picked <= 36)){
+      return gameMsg('rl', 'Pick a number between 0 and 36.', 'lose');
+    }
+  }
+
+  meta.balance -= bet;
+  const n = Math.floor(Math.random() * 37);
+  const color = rouletteColor(n);
+  let win = 0;
+
+  switch (type){
+    case 'red':   if (color === 'red')   win = bet * 2; break;
+    case 'black': if (color === 'black') win = bet * 2; break;
+    case 'odd':   if (n !== 0 && n % 2 === 1) win = bet * 2; break;
+    case 'even':  if (n !== 0 && n % 2 === 0) win = bet * 2; break;
+    case 'low':   if (n >= 1 && n <= 18) win = bet * 2; break;
+    case 'high':  if (n >= 19 && n <= 36) win = bet * 2; break;
+    case 'number': if (n === picked) win = bet * 36; break;
+  }
+
+  meta.balance += win;
+  rouletteHistory = [n, ...rouletteHistory].slice(0, 12);
+
+  const label = `Ball lands on ${n} (${color}).`;
+  if (win > 0){
+    gameMsg('rl', `${label} You win +${win - bet} credits.`, 'win');
+  } else {
+    gameMsg('rl', `${label} You lose ${bet} credits.`, 'lose');
+  }
+
+  persist(); renderCasino();
+}
+
+/* ----- coin flip ----- */
+function coinFlip(side){
+  const bet = readBet();
+  if (!bet) return gameMsg('cf', 'Enter a valid bet first.', 'lose');
+  if (bet > meta.balance) return gameMsg('cf', 'Not enough credits.', 'lose');
+
+  meta.balance -= bet;
+  const result = Math.random() < 0.5 ? 'heads' : 'tails';
+  if (result === side){
+    meta.balance += bet * 2;
+    gameMsg('cf', `It's ${result} — you win +${bet} credits.`, 'win');
+  } else {
+    gameMsg('cf', `It's ${result} — you lose ${bet} credits.`, 'lose');
+  }
+  persist(); renderCasino();
 }
 
 /* ---------- export / import ---------- */
@@ -916,16 +1354,17 @@ function download(filename, text, type){
 function backupFilename(){
   const d = new Date();
   const p = n => String(n).padStart(2, '0');
-  return `liftoff-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}` +
+  return `jiminy-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}` +
          `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.json`;
 }
 
 function exportJSON(silent){
   const data = JSON.stringify({
-    app: 'liftoff',
-    version: 1,
+    app: 'jiminy-cricket',
+    version: 2,
     exportedAt: new Date().toISOString(),
-    workouts
+    workouts,
+    customExercises
   }, null, 2);
   download(backupFilename(), data);
   meta.lastBackupAt = Date.now();
@@ -994,6 +1433,15 @@ function importJSON(file){
       for (const w of clean){
         if (!existing.has(w.id)){ workouts.push(w); existing.add(w.id); added++; }
       }
+      // pull in any custom exercise names from the backup
+      if (Array.isArray(raw.customExercises)){
+        raw.customExercises.forEach(e => {
+          if (e && typeof e.n === 'string') addCustomExercise(e.n);
+        });
+      }
+      // and anything referenced by the imported workouts
+      clean.forEach(w => w.exercises.forEach(e => addCustomExercise(e.name)));
+
       meta.lastBackupAt = Date.now();
       meta.dirty = true;
       persist();
@@ -1036,10 +1484,18 @@ document.addEventListener('click', e => {
       reps:   parseInt(s.reps, 10) || 0
     })).filter(s => s.reps > 0);
     if (!sets.length){ alert('Add at least one set with reps > 0.'); return; }
+
+    // NEW: remember any exercise that isn't already in the catalogue
+    const wasNew = addCustomExercise(name);
+
     draft.exercises.push({ id: uid(), name, sets });
     clearExerciseSelection();
     persist();
     renderAll();
+    if (wasNew){
+      creditNote = `“${name}” added to your exercise list.`;
+      renderCasino();
+    }
     $('#exSearch').focus();
   }
 
@@ -1053,6 +1509,15 @@ document.addEventListener('click', e => {
     draft.exercises.splice(+btn.dataset.ei, 1);
     persist();
     renderDraft();
+  }
+
+  else if (a === 'rm-custom'){
+    const name = btn.dataset.name;
+    if (!confirm(`Remove “${name}” from your exercise list?\n\n` +
+                 `Past workouts keep their records.`)) return;
+    removeCustomExercise(name);
+    persist();
+    renderAll();
   }
 
   else if (a === 'finish'){
@@ -1069,6 +1534,8 @@ document.addEventListener('click', e => {
     draft = { date: todayISO(), exercises: [] };
     $('#date').value = draft.date;
     meta.dirty = true;
+    meta.balance += WORKOUT_BONUS;
+    creditNote = `+${WORKOUT_BONUS} credits earned for finishing a workout 🎉`;
     persist();
     autoSnapshot('after finish');
     autoBackupAfterWorkout();
@@ -1096,6 +1563,42 @@ document.addEventListener('click', e => {
     renderAll();
   }
 
+  /* ---- casino ---- */
+  else if (a === 'tab'){
+    document.querySelectorAll('.tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.tab === btn.dataset.tab));
+    ['bj','rl','cf'].forEach(k =>
+      $('#tab-' + k).hidden = (k !== btn.dataset.tab));
+  }
+
+  else if (a === 'set-bet'){
+    const v = btn.dataset.v;
+    $('#betAmount').value = v === 'max'
+      ? Math.max(1, Math.floor(meta.balance))
+      : v;
+  }
+
+  else if (a === 'add-credits'){
+    meta.balance += 500;
+    creditNote = '+500 credits added.';
+    persist(); renderCasino();
+  }
+
+  else if (a === 'reset-credits'){
+    if (!confirm('Reset your balance to ' + CREDIT_START + ' credits?')) return;
+    meta.balance = CREDIT_START;
+    creditNote = 'Balance reset.';
+    persist(); renderCasino();
+  }
+
+  else if (a === 'bj-deal')   { bjDeal(); }
+  else if (a === 'bj-hit')    { bjHit(); }
+  else if (a === 'bj-stand')  { bjStand(); }
+  else if (a === 'bj-double') { bjDouble(); }
+  else if (a === 'rl-spin')   { rouletteSpin(); }
+  else if (a === 'cf-heads')  { coinFlip('heads'); }
+  else if (a === 'cf-tails')  { coinFlip('tails'); }
+
   else if (a === 'export')  { exportJSON(false); }
   else if (a === 'csv')     { exportCSV(); }
   else if (a === 'import')  { $('#importFile').click(); }
@@ -1118,6 +1621,7 @@ document.addEventListener('visibilitychange', () => {
       meta.dirty = false;
       persist();
     }
+    saveBJ();
   }
 });
 
@@ -1127,6 +1631,7 @@ window.addEventListener('pagehide', () => {
     meta.dirty = false;
     persist();
   }
+  saveBJ();
 });
 
 /* ---------- init ---------- */
@@ -1153,6 +1658,10 @@ window.addEventListener('pagehide', () => {
     const f = e.target.files?.[0];
     if (f) importJSON(f);
     e.target.value = '';
+  };
+
+  $('#rouletteType').onchange = e => {
+    $('#rouletteNumber').hidden = e.target.value !== 'number';
   };
 
   const optD = $('#optAutoDownload');
@@ -1184,7 +1693,4 @@ window.addEventListener('pagehide', () => {
 })();
 </script>
 </body>
-  <p style="text-align:center;color:#8b93a1;font-size:11px;margin-top:30px">
-  v3 · built 2026-10-25
-</p>
 </html>
