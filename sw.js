@@ -1,6 +1,7 @@
 const CACHE = 'jiminy-cricket-v5';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
+
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
     const c = await caches.open(CACHE);
